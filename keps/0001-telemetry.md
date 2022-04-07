@@ -53,7 +53,13 @@ of our projects.
 
 ## Telemetry Collection
 
-The data collected through this library will help us solve a variety of product and engineering questions. Through this optional library, Kong can better understand our customer landscape by answering questions such as:
+The data collected through this library will help us solve a variety of product and engineering questions. This data helps Kong:
+
+ - Monitor and analyze trends, usage, and activities while using KIC
+ - Measure the performance of the KIC
+ - Research and develop new features based off customer usage
+
+Through this optional library, Kong can better understand our customer landscape by answering questions such as:
 
  - How many ingress rules are our customers creating?
  - Do our customers have a service mesh behind the Gateway?
