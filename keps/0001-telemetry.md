@@ -82,6 +82,7 @@ More specifically, the KIC will collect the following pieces of information:
  - Route Types
  - Ingress version
  - Last configuration change
+ - Gateways
 
  ## Acceptance Criteria
  
