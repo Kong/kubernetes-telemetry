@@ -62,12 +62,11 @@ The data collected through this library will help us solve a variety of product 
 Through this optional library, Kong can better understand our customer landscape by answering questions such as:
 
  - How many ingress rules are our customers creating?
- - Do our customers have a service mesh behind the Gateway?
+- Do customers have a service mesh deployed no the cluster, and is the Kong Gateway operating inside that network?
  - What routing protocols are most widely used?
  - Given a certain cluster size or environment, are there any outstanding performance issues?
 
-More specifically, the KIC will collect the following pieces of information:
- 
+More specifically this tool will have the ability to collect the following pieces of information:
  
 **General Environment**
  - Orchestration Platform
@@ -91,7 +90,6 @@ More specifically, the KIC will collect the following pieces of information:
  - Gateways
 
  ## Acceptance Criteria
- 
 
  - [ ] Golang library is published
  - [ ] All telemetry outlined in Telemetry Collection is collected and sent to splunk
