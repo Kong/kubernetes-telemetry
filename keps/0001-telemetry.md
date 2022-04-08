@@ -1,3 +1,4 @@
+
 ---
 title: Telemetry Library
 status: provisional
@@ -50,8 +51,47 @@ of our projects.
 
 [go]:https://go.dev
 
-## TODO
+## Telemetry Collection
 
-(sean): we need some process and examples which would help us show end-users
-_how_ we will end up using this data and what effects it will have on their
-products which will benefit them.
+The data collected through this library will help us solve a variety of product and engineering questions. This data helps Kong:
+
+ - Monitor and analyze trends, usage, and activities while using KIC
+ - Measure the performance of the KIC
+ - Research and develop new features based off customer usage
+
+Through this optional library, Kong can better understand our customer landscape by answering questions such as:
+
+ - How many ingress rules are our customers creating?
+- Do customers have a service mesh deployed to the cluster, and is the Kong Gateway operating inside that network?
+ - What routing protocols are most widely used?
+ - Given a certain cluster size or environment, are there any outstanding performance issues?
+
+More specifically this tool will have the ability to collect the following pieces of information:
+ 
+**General Environment**
+ - Orchestration Platform
+ - Kubernetes Version
+ - Feature Flags
+ - Connection to a Service Mesh
+ - Number of pods
+ - Number of services
+ - Architecture
+ 
+ **Kong Specifics**
+ 
+ - Kong Plugins
+	 - Count
+	 - Custom Plugins
+ - Deployment Method
+ - Route Types
+ - Ingress version
+ - Last configuration change
+ - Gateways
+
+ ## Acceptance Criteria
+
+ - [ ] Golang library is published
+ - [ ] All telemetry outlined in Telemetry Collection is collected and sent to splunk
+ - [ ] An opt out setting is created
+
+ 
