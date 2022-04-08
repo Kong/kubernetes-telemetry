@@ -62,7 +62,7 @@ The data collected through this library will help us solve a variety of product 
 Through this optional library, Kong can better understand our customer landscape by answering questions such as:
 
  - How many ingress rules are our customers creating?
-- Do customers have a service mesh deployed no the cluster, and is the Kong Gateway operating inside that network?
+- Do customers have a service mesh deployed to the cluster, and is the Kong Gateway operating inside that network?
  - What routing protocols are most widely used?
  - Given a certain cluster size or environment, are there any outstanding performance issues?
 
@@ -73,7 +73,6 @@ More specifically this tool will have the ability to collect the following piece
  - Kubernetes Version
  - Feature Flags
  - Connection to a Service Mesh
- - Number of clusters
  - Number of pods
  - Number of services
  - Architecture
