@@ -17,13 +17,14 @@ creation-date: 2022-05-30
 [Service Mesh][servicemesh] is an infrastructure layer that allows you to 
 manage communication between your application’s microservices. It is
 important for us to know which service mesh our customers and end users 
-use in their kubernetes clusters, and how do they use service mesh.
-Currently, the usage of service mesh is not collected in our products. The
-purpose of this KEP is to implement a method to detect that whether a service
-mesh is deployed in kubernetes cluster, and if so, gather the information
-about this mesh, This is in turn could be used in the
-[Kong Kubernetes Ingress Controller (KIC)][kic] or other products written in
-[Golang][go] running in kubernetes.
+use in their kubernetes clusters (and how they use those service meshes)
+so that we can predict and plan for performance tunings, features and new
+products which integrate with mesh networks. Currently, the usage of service
+mesh is not collected in our products. The purpose of this KEP is to
+implement a method to detect whether a service mesh is deployed in kubernetes
+cluster and if so gather information about this mesh, This is in turn could
+be used in the  [Kong Kubernetes Ingress Controller (KIC)][kic] or other
+products written in [Golang][go] running in kubernetes.
 
 [servicemesh]:https://www.digitalocean.com/community/tutorials/an-introduction-to-service-meshes
 [kic]:https://github.com/kong/kubernetes-ingress-controller
@@ -31,12 +32,12 @@ about this mesh, This is in turn could be used in the
 
 ## Motivation
 
-- We want to detect if our users deploys service mesh in their kubernetes\
+- We want to detect if our users deploy service mesh in their kubernetes
   clusters, and which service mesh do they deploy (for example, istio,
   linkerd, or kuma)
-- We want to detect if [KIC][kic] and/or [Kong Gateway][konggw] is running in 
-  a service mesh.
-- We want to detect the share of services running in service mesh.
+- We want to detect if [KIC][kic] and/or [Kong Gateway][konggw] is running
+  within a service mesh network.
+- We want to detect the number of services running in service mesh.
 - We want to implement the detection methods above in the telemetry
   library for products such as [KIC][kic] to import.
 
@@ -89,7 +90,7 @@ Special notes:
 - Namespace for kuma/kong mesh has label `kuma.io/system-namespace: "true"`
 - kuma and kong mesh could be distinguished by namespace name and service 
   name.
-- `traefik mesh` does not haave unique CRDs.
+- `traefik mesh` does not have unique CRDs.
 
 ### Detecting KIC Running in Service Mesh
 
@@ -122,11 +123,11 @@ Special notes:
 
 ### Detecting Distribution of Service Mesh
 
-This part proposes methods to detect the rate of services running in service
-mesh. Usually, pods of services running in service mesh are injected with a 
-sidecar container. We can list all `services` in kubernetes cluster, and then
-check their correspoding `endpoints` to get the names of `pods` in the
-service. Finally, we check whether the `pods` have a sidecar container to
+This part proposes methods to detect the numbers of services running in
+service mesh. Usually, pods of services running in service mesh are injected
+with a sidecar container. We can list all `services` in kubernetes cluster,
+and then check their correspoding `endpoints` to get the names of `pods` in
+the service. Finally, we check whether the `pods` have a sidecar container to
 judge whether the service is running in service mesh.
 
 For example, we check all `services` in `default` namespace:
@@ -189,8 +190,8 @@ or `mesh.traefik.io/traffic-type:TCP`.
 
 ### Format of reporting to splunk
 
-After informations of service mesh deployment and distribution are gathered,
-we should report the informations to our splunk service. Here we propose the
+After information of service mesh deployment and distribution are gathered,
+we should report the information to our splunk service. Here we propose the
 format of messages reported to splunk. Currently, the messages reported to 
 splunk is a single line with multiple KV pairs, seperated by `;`. An example
 of reported messages is:
@@ -211,8 +212,8 @@ Value used in service mesh deployment part
 | singnal2: CRD | `istio2` or `i2` | `linkerd2` or `l2` | `kuma2` or `k2` | `kongmesh2` or `km2` | `consul2` or `c2` | None(No unique CRD) | `aws2` or `a2` |
 | singnal3: service | `istio3` or `i3` | `linkerd3` or `l3` | `kuma3` or `k3` | `kongmesh3` or `km3` | `consul3` or `c3` | `traefik3` or `t3` | `aws3` or `a3` |
 
-Multiple signals detected would results in multiple parts in value seperated
-by `,`.
+Multiple signals detected would result in multiple parts in comma(`,`)
+seperated parts.
 
 For example, if we found `istio-system` and `kuma-system` namespace, CRDs in 
 kuma, and `kuma-control-plane` service in `kuma-system`, the key-value pair
@@ -227,23 +228,24 @@ Values used in KIC running in service mesh part
 | singnal3: sidecar container in pod | `istio3` or `i3` | `linkerd3` or `l3` | `kuma3` or `k3` | `kongmesh3` or `km3` | `consul3` or `c3` | (NO sidecar) | `aws3` or `a3` |
 | singnal4: init container in pod | `istio4` or `i4` | `linkerd4` or `l4` | `kuma4` or `k4` | `kongmesh4` or `km4` | `consul4` or `c4` | (NO sidecar) | `aws4` or `a4` |
 
-Multiple signals detected would results in multiple parts in value seperated
-by `,`.
+Multiple signals detected would result in multiple parts in comma(`,`)
+seperated parts.
 
 For example, if we found label `istio-injection=enabled` in KIC's namespace,
 and `kuma.io/sidecar-injected=true` annotation, `kuma-sidecar` container in
 KIC's pod, the message would be `kinm=i1,k2,k3`.
 
-Values in service mesh share part
+Values in service mesh distribution part
 
-The value would have to parts: mesh name and mesh share(in [0,1]). If there 
-are services running in different service meshes, the share are reported 
-seperately. For example, 50 of 100 services are running in kuma, 25 of 100
-services are running in istio, we have this message `mshare=k0.50,i0.25`.
+The value would have the following parts: total number of services, mesh
+names and number of services running in this mesh. If there are services
+running in different service meshes, the numbers are reported seperately. For
+example, 50 of 100 services are running in kuma, 25 of 100 services are 
+running in istio, we have this message `mshare=100,k50,i25`.
 
 The three parts of detection results are combined to one line seperated by
 `;`. For example, the final reported message to splunk would be combined by
 the three key-value pairs above. The final message reported would be 
 ```
-mdep=i1,k1,k2,k3;kinm=i1,k2,k3;mshare=k0.50,i0.25
+mdep=i1,k1,k2,k3;kinm=i1,k2,k3;mshare=100,k50,m25
 ```
