@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	ClusterVersionKey  = "k8s-cluster-version"
-	ClusterVersionKind = Kind(ClusterArchKey)
+	// ClusterVersionKey is report key under which cluster k8s version will be provided.
+	ClusterVersionKey = "k8s-cluster-version"
+	// ClusterVersionKind represents cluster version provider kind.
+	ClusterVersionKind = Kind(ClusterVersionKey)
 )
 
 // NewK8sClusterVersionProvider creates telemetry data provider that will query the

@@ -4,6 +4,7 @@ import (
 	"context"
 )
 
+// Kind presents provider's kind.
 type Kind string
 
 // Provider defines how a telemetry provider can be used.

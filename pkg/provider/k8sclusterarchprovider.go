@@ -9,7 +9,9 @@ import (
 )
 
 const (
-	ClusterArchKey  = "k8s-cluster-arch"
+	// ClusterArchKey is report key under which cluster architecture will be provided.
+	ClusterArchKey = "k8s-cluster-arch"
+	// ClusterArchKind represents cluster arch provider kind.
 	ClusterArchKind = Kind(ClusterArchKey)
 )
 
