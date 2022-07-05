@@ -9,6 +9,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// k8sObjectCount is a Provider that returns the count of all objects of a certain kind in the Kubernetes cluster.
+// Caller indicates object kind by passing its "*List" GVK to `objectType`.
+//
+// Example: Use {Group: "", Version: "v1", Kind: "PodList"} to get a Provider that counts all Pods in the cluster.
 type k8sObjectCount struct {
 	cl         client.Client
 	objectType schema.GroupVersionKind
