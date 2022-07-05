@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	"github.com/puzpuzpuz/xsync"
 
 	"github.com/Kong/kubernetes-telemetry/pkg/provider"
@@ -57,6 +58,7 @@ type Manager interface {
 	Stop()
 	AddConsumer(ch chan<- provider.Report) error
 	AddWorkflow(Workflow)
+	Execute(context.Context) (provider.Report, error)
 }
 
 func NewManager(opts ...OptManager) (Manager, error) {
@@ -129,17 +131,11 @@ func (m *manager) workflowsLoop() {
 			return
 
 		case <-ticker.C:
-			report := provider.Report{}
-			m.workflows.Range(func(name string, v Workflow) bool {
-				r, err := v.Execute(context.Background())
-				if err != nil {
-					m.logger.Error(err, "error executing workflow %s", name)
-					return true
-				}
-
-				report.Merge(r)
-				return true
-			})
+			report, err := m.Execute(context.Background())
+			if err != nil {
+				m.logger.Error(err, "error executing workflows")
+				continue
+			}
 
 			select {
 			case m.ch <- report:
@@ -148,6 +144,26 @@ func (m *manager) workflowsLoop() {
 			}
 		}
 	}
+}
+
+func (m *manager) Execute(ctx context.Context) (provider.Report, error) {
+	var (
+		err    error
+		report = provider.Report{}
+	)
+
+	m.workflows.Range(func(name string, v Workflow) bool {
+		var r provider.Report
+		r, err = v.Execute(ctx)
+		if err != nil {
+			err = errors.Wrapf(err, "error executing workflow %s", name)
+			return false
+		}
+
+		report.Merge(r)
+		return true
+	})
+	return report, err
 }
 
 // consumerLoop loops over all configured consumers and sends the gathered telemetry
