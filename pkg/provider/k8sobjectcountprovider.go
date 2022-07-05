@@ -39,6 +39,8 @@ func objectCount(ctx context.Context, cl client.Client, gvk schema.GroupVersionK
 
 	list.SetGroupVersionKind(gvk)
 
+	// We could consider using the ListMeta field RemainingItemCount instead of iterating, but per v1.24 documentation
+	// it's not guaranteed to be accurate.
 	for continueToken := ""; ; continueToken = list.GetContinue() {
 		err := cl.List(ctx, &list, &client.ListOptions{
 			Continue: continueToken,
