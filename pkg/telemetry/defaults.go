@@ -1,4 +1,4 @@
-package pkg
+package telemetry
 
 import (
 	"github.com/bombsimon/logrusr/v3"
@@ -6,6 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func DefaultLogger() logr.Logger {
+func defaultLogger() logr.Logger {
 	return logrusr.New(logrus.New())
 }

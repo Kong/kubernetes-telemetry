@@ -7,47 +7,34 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-type k8sClusterVersion struct {
-	// kc provides client-go's client implementation. This is used for retrieving
-	// cluster's version and architecture through discovery interface.
-	kc kubernetes.Interface
-
-	base
-}
-
-var _ Provider = (*k8sClusterVersion)(nil)
-
-func NewK8sClusterVersionProvider(name string, kc kubernetes.Interface) (Provider, error) {
-	return k8sClusterVersion{
-		kc: kc,
-		base: base{
-			name: name,
-			kind: "k8s-cluster-version",
-		},
-	}, nil
-}
-
 const (
-	ClusterVersionKey = "k8s-cluster-version"
+	ClusterVersionKey  = "k8s-cluster-version"
+	ClusterVersionKind = Kind("k8s-cluster-version")
 )
 
-func (p k8sClusterVersion) Provide(ctx context.Context) (Report, error) {
-	cVersion, err := p.clusterVersion(ctx)
+// NewK8sClusterVersionProvider creates telemetry data provider that will query the
+// configured k8s cluster - using the provided client - to get cluster k8s version.
+func NewK8sClusterVersionProvider(name string, kc kubernetes.Interface) (Provider, error) {
+	return NewK8sClientGoBase(name, ClusterVersionKind, kc, clusterVersionReport)
+}
+
+func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report, error) {
+	v, err := clusterVersion(ctx, kc)
 	if err != nil {
 		return nil, err
 	}
 
 	return Report{
-		ClusterVersionKey: cVersion,
+		ClusterVersionKey: v,
 	}, nil
 }
 
 // clusterVersion returns cluster's k8s version.
-func (p k8sClusterVersion) clusterVersion(ctx context.Context) (string, error) {
-	version, err := p.kc.Discovery().ServerVersion()
+func clusterVersion(ctx context.Context, kc kubernetes.Interface) (string, error) {
+	version, err := kc.Discovery().ServerVersion()
 	if err != nil {
-		return "", p.WrapError(fmt.Errorf("failed to get cluster version: %w", err))
+		return "", fmt.Errorf("failed to get cluster version: %w", err)
 	}
 
-	return version.String(), nil
+	return (version.Platform), nil
 }

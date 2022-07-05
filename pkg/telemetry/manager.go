@@ -10,7 +10,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/puzpuzpuz/xsync"
 
-	"github.com/Kong/kubernetes-telemetry/pkg"
 	"github.com/Kong/kubernetes-telemetry/pkg/provider"
 )
 
@@ -66,7 +65,7 @@ func NewManager(opts ...OptManager) (Manager, error) {
 		period:    DefaultWorkflowTickPeriod,
 		consumers: []chan<- provider.Report{},
 		ch:        make(chan provider.Report),
-		logger:    pkg.DefaultLogger(),
+		logger:    defaultLogger(),
 		done:      make(chan struct{}),
 	}
 

@@ -8,31 +8,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type k8sPodsCountProvider struct {
-	// cl provides controller-runtime client implementation.
-	cl client.Client
-
-	base
-}
-
-var _ Provider = (*k8sPodsCountProvider)(nil)
-
-func NewK8sPodsCountProvider(name string, cl client.Client) (Provider, error) {
-	return k8sPodsCountProvider{
-		cl: cl,
-		base: base{
-			name: name,
-			kind: "k8s-pod-count",
-		},
-	}, nil
-}
-
 const (
-	PodCountKey = "k8s-pod-count"
+	PodCountKey  = "k8s-pod-count"
+	PodCountKind = Kind("k8s-pod-count")
 )
 
-func (p k8sPodsCountProvider) Provide(ctx context.Context) (Report, error) {
-	podsCount, err := p.PodsCount(ctx)
+// NewK8sPodCountProvider creates telemetry data provider that will query the
+// configured k8s cluster - using the provided client - to get pod count from
+// the cluster
+func NewK8sPodCountProvider(name string, cl client.Client) (Provider, error) {
+	return NewK8sControllerRuntimeBase(name, PodCountKind, cl, podCountReport)
+}
+
+func podCountReport(ctx context.Context, cl client.Client) (Report, error) {
+	podsCount, err := podCount(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
@@ -42,19 +31,18 @@ func (p k8sPodsCountProvider) Provide(ctx context.Context) (Report, error) {
 	}, nil
 }
 
-// PodsCount returns the number of pods defined in the cluster.
-func (p k8sPodsCountProvider) PodsCount(ctx context.Context) (int, error) {
+func podCount(ctx context.Context, cl client.Client) (int, error) {
 	var (
 		podsList corev1.PodList
 		count    int
 	)
 
 	for continueToken := ""; ; continueToken = podsList.Continue {
-		err := p.cl.List(ctx, &podsList, &client.ListOptions{
+		err := cl.List(ctx, &podsList, &client.ListOptions{
 			Continue: continueToken,
 		})
 		if err != nil {
-			return 0, p.WrapError(fmt.Errorf("failed to list pods: %w", err))
+			return 0, fmt.Errorf("failed to list pods: %w", err)
 		}
 
 		count += len(podsList.Items)
