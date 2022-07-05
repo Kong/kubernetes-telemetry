@@ -20,7 +20,7 @@ func NewFunctorProvider(name string, f ReportFunctor) (Provider, error) {
 		f: f,
 		base: base{
 			name: name,
-			kind: "custom",
+			kind: "functor",
 		},
 	}, nil
 }

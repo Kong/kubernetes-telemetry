@@ -18,7 +18,7 @@ func NewFixedValueProvider(name string, data Report) (Provider, error) {
 		data: data,
 		base: base{
 			name: name,
-			kind: "constant",
+			kind: "fixed-value",
 		},
 	}, nil
 }
