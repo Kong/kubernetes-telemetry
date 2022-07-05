@@ -21,39 +21,30 @@ type k8sObjectCount struct {
 }
 
 func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
-	count, err := objectCount(ctx, k.cl, k.objectType)
-	if err != nil {
-		return nil, k.WrapError(err)
-	}
-
-	return Report{
-		k.Name(): count,
-	}, nil
-}
-
-func objectCount(ctx context.Context, cl client.Client, gvk schema.GroupVersionKind) (int, error) {
 	var (
-		list  unstructured.UnstructuredList
-		count int
+		list        unstructured.UnstructuredList
+		resultCount int
 	)
 
-	list.SetGroupVersionKind(gvk)
+	list.SetGroupVersionKind(k.objectType)
 
 	// We could consider using the ListMeta field RemainingItemCount instead of iterating, but per v1.24 documentation
 	// it's not guaranteed to be accurate.
 	for continueToken := ""; ; continueToken = list.GetContinue() {
-		err := cl.List(ctx, &list, &client.ListOptions{
+		err := k.cl.List(ctx, &list, &client.ListOptions{
 			Continue: continueToken,
 		})
 		if err != nil {
-			return 0, fmt.Errorf("failed to list %v: %w", gvk.String(), err)
+			return nil, k.WrapError(fmt.Errorf("failed to list %v: %w", k.objectType.String(), err))
 		}
 
-		count += len(list.Items)
+		resultCount += len(list.Items)
 		if list.GetContinue() == "" {
 			break
 		}
 	}
 
-	return count, nil
+	return Report{
+		k.Name(): resultCount,
+	}, nil
 }
