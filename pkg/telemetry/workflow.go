@@ -11,8 +11,11 @@ import (
 )
 
 type Workflow interface {
+	// Name returns workflow's name.
 	Name() string
+	// AddProvider adds a provider.
 	AddProvider(provider.Provider)
+	// Execute executes the workflow.
 	Execute(context.Context) (provider.Report, error)
 }
 
@@ -24,6 +27,7 @@ type workflow struct {
 	providers   []provider.Provider
 }
 
+// NewWorkflow creates a new empty workflow.
 func NewWorkflow(name string) Workflow {
 	return &workflow{
 		name:        name,

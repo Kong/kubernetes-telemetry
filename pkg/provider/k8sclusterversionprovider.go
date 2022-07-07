@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
 	ClusterVersionKey  = "k8s-cluster-version"
-	ClusterVersionKind = Kind("k8s-cluster-version")
+	ClusterVersionKind = Kind(ClusterArchKey)
 )
 
 // NewK8sClusterVersionProvider creates telemetry data provider that will query the
@@ -19,7 +20,7 @@ func NewK8sClusterVersionProvider(name string, kc kubernetes.Interface) (Provide
 }
 
 func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report, error) {
-	v, err := clusterVersion(ctx, kc)
+	v, err := clusterVersion(ctx, kc.Discovery())
 	if err != nil {
 		return nil, err
 	}
@@ -30,11 +31,16 @@ func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report,
 }
 
 // clusterVersion returns cluster's k8s version.
-func clusterVersion(ctx context.Context, kc kubernetes.Interface) (string, error) {
-	version, err := kc.Discovery().ServerVersion()
+//
+// NOTE:
+// As of now it uses a simplified logic to GET the /version endpoint which
+// might be OK for most use cases but for some, more granular approach might
+// be needed to account for different versions of k8s nodes across the cluster.
+func clusterVersion(ctx context.Context, d discovery.DiscoveryInterface) (string, error) {
+	version, err := d.ServerVersion()
 	if err != nil {
 		return "", fmt.Errorf("failed to get cluster version: %w", err)
 	}
 
-	return (version.Platform), nil
+	return (version.GitVersion), nil
 }

@@ -14,7 +14,7 @@ var _ Provider = (*fixedValue)(nil)
 // NewFixedValueProvider creates fixed value provider which upon calling Provide
 // will always provide the same telemetry report.
 func NewFixedValueProvider(name string, data Report) (Provider, error) {
-	return fixedValue{
+	return &fixedValue{
 		data: data,
 		base: base{
 			name: name,
@@ -23,6 +23,7 @@ func NewFixedValueProvider(name string, data Report) (Provider, error) {
 	}, nil
 }
 
-func (p fixedValue) Provide(ctx context.Context) (Report, error) {
+// Provide provides the configure, fixed value report.
+func (p *fixedValue) Provide(ctx context.Context) (Report, error) {
 	return p.data, nil
 }

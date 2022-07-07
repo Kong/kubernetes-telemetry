@@ -7,11 +7,11 @@ import (
 
 const (
 	PodCountKey  = "k8s-pod-count"
-	PodCountKind = Kind("k8s-pod-count")
+	PodCountKind = Kind(PodCountKey)
 )
 
 // NewK8sPodCountProvider creates telemetry data provider that will query the
-// configured k8s cluster - using the provided client - to get pod count from
+// configured k8s cluster - using the provided client - to get a pod count from
 // the cluster
 func NewK8sPodCountProvider(name string, cl client.Client) Provider {
 	return &k8sObjectCount{

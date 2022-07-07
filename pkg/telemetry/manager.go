@@ -14,10 +14,6 @@ import (
 	"github.com/Kong/kubernetes-telemetry/pkg/provider"
 )
 
-const (
-	DefaultWorkflowTickPeriod = 5 * time.Second
-)
-
 type managerErr string
 
 func (e managerErr) Error() string {
@@ -25,8 +21,20 @@ func (e managerErr) Error() string {
 }
 
 const (
-	ErrManagerAlreadyStarted      = managerErr("telemetry manager already started")
+	// ErrManagerAlreadyStarted occurs when a manager has been already started
+	// and it's attempted to be started again.
+	ErrManagerAlreadyStarted = managerErr("manager already started")
+	// ErrCantAddConsumersAfterStart occurs when consumers are tried to be added
+	// after the manager has been already started.
 	ErrCantAddConsumersAfterStart = managerErr("can't add consumers after start")
+)
+
+// Report represents a report that is returnd by executing managers workflows.
+// This is also the type that is being sent out to consumers.
+type Report map[string]provider.Report
+
+const (
+	DefaultWorkflowTickPeriod = 5 * time.Second
 )
 
 type manager struct {
@@ -39,9 +47,9 @@ type manager struct {
 
 	// consumers is a slice of channels that will consume reports produced by
 	// execution of workflows.
-	consumers []chan<- provider.Report
+	consumers []chan<- Report
 
-	ch      chan provider.Report
+	ch      chan Report
 	once    sync.Once
 	logger  logr.Logger
 	done    chan struct{}
@@ -53,20 +61,34 @@ var _ Manager = (*manager)(nil)
 // Manager controls and runs workflows which provide telemetry data.
 // This telemetry is then send over to consumers. Owners of consumers are
 // responsible that they consume the data in a timely manner.
+//
+// The reports produced by Manager are maps of workflows names - that produced
+// their respective reports - to those reports. This way reports from independent
+// workflows are enclosed in separate map objects in manager's report.
 type Manager interface {
+	// Start starts the manager. This in turn starts an internal ticker which
+	// periodically triggers the configured workflows to get the telemetry data
+	// via the configured providers and to forward that data to consumers.
 	Start() error
+	// Stop stops the manager the internal loops.
 	Stop()
-	AddConsumer(ch chan<- provider.Report) error
+	// AddConsumer adds a consumer of telemetry data provided by configured
+	// workflows' providers.
+	AddConsumer(ch chan<- Report) error
+	// AddWorkflow adds a workflow with providers which will provide telemetry data.
 	AddWorkflow(Workflow)
-	Execute(context.Context) (provider.Report, error)
+	// Excecute executes all workflows and returns an aggregated report from those
+	// workflows.
+	Execute(context.Context) (Report, error)
 }
 
+// NewManager creates a new manager configured via the provided options.
 func NewManager(opts ...OptManager) (Manager, error) {
 	m := &manager{
 		workflows: xsync.NewMapOf[Workflow](),
 		period:    DefaultWorkflowTickPeriod,
-		consumers: []chan<- provider.Report{},
-		ch:        make(chan provider.Report),
+		consumers: []chan<- Report{},
+		ch:        make(chan Report),
 		logger:    defaultLogger(),
 		done:      make(chan struct{}),
 	}
@@ -98,6 +120,7 @@ func (m *manager) Start() error {
 	return nil
 }
 
+// Stop stops the manager.
 func (m *manager) Stop() {
 	m.logger.Info("stopping telemetry manager")
 	m.once.Do(func() {
@@ -105,7 +128,8 @@ func (m *manager) Stop() {
 	})
 }
 
-func (m *manager) AddConsumer(ch chan<- provider.Report) error {
+// AddConsumer adds a consumer.
+func (m *manager) AddConsumer(ch chan<- Report) error {
 	if atomic.LoadInt32(&m.started) > 0 {
 		return ErrCantAddConsumersAfterStart
 	}
@@ -146,10 +170,12 @@ func (m *manager) workflowsLoop() {
 	}
 }
 
-func (m *manager) Execute(ctx context.Context) (provider.Report, error) {
+// Execute executes all configures workflows and returns an aggregated report
+// from all the underying providers.
+func (m *manager) Execute(ctx context.Context) (Report, error) {
 	var (
 		err    error
-		report = provider.Report{}
+		report = Report{}
 	)
 
 	m.workflows.Range(func(name string, v Workflow) bool {
@@ -160,7 +186,7 @@ func (m *manager) Execute(ctx context.Context) (provider.Report, error) {
 			return false
 		}
 
-		report.Merge(r)
+		report[v.Name()] = r
 		return true
 	})
 	return report, err
