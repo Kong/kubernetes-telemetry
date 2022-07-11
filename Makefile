@@ -1,7 +1,3 @@
-.PHONY: lint
-lint: golangci-lint
-	golangci-lint run -v
-
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -21,6 +17,10 @@ golangci-lint: ## Download golangci-lint locally if necessary.
 # ------------------------------------------------------------------------------
 # Build & Tests
 # ------------------------------------------------------------------------------
+
+.PHONY: lint
+lint: golangci-lint
+	$(GOLANGCI_LINT) run -v
 
 .PHONY: test.unit
 test.unit:
