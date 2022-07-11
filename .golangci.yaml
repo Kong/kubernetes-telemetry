@@ -1,0 +1,42 @@
+run:
+  timeout: 5m
+linters:
+  enable:
+  - asciicheck
+  - bodyclose
+  - depguard
+  - dogsled
+  - durationcheck
+  - errcheck
+  - errorlint
+  - exhaustive
+  - exportloopref
+  - gci
+  - gofmt
+  - goimports
+  - gosec
+  - govet
+  - importas
+  - ineffassign
+  - megacheck
+  - misspell
+  - nakedret
+  - nilerr
+  - nolintlint
+  - predeclared
+  - revive
+  - staticcheck
+  - structcheck
+  - typecheck
+  - unconvert
+  - unparam
+  - varcheck
+  - wastedassign
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/Kong/kubernetes-telemetry)
+issues:
+  fix: true
