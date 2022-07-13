@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
+// OptManager is the option function type that can configure the manager.
 type OptManager func(*manager) error
 
 // OptManagerLogger returns an option that will set manager's logger.

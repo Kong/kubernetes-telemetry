@@ -29,11 +29,13 @@ const (
 	ErrCantAddConsumersAfterStart = managerErr("can't add consumers after start")
 )
 
-// Report represents a report that is returnd by executing managers workflows.
+// Report represents a report that is returned by executing managers workflows.
 // This is also the type that is being sent out to consumers.
 type Report map[string]provider.Report
 
 const (
+	// DefaultWorkflowTickPeriod is the default tick period with which the manager
+	// will trigger configured workflows execution.
 	DefaultWorkflowTickPeriod = 5 * time.Second
 )
 
@@ -77,7 +79,7 @@ type Manager interface {
 	AddConsumer(ch chan<- Report) error
 	// AddWorkflow adds a workflow with providers which will provide telemetry data.
 	AddWorkflow(Workflow)
-	// Excecute executes all workflows and returns an aggregated report from those
+	// Execute executes all workflows and returns an aggregated report from those
 	// workflows.
 	Execute(context.Context) (Report, error)
 }

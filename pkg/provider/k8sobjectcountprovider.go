@@ -2,49 +2,48 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 )
 
 // k8sObjectCount is a Provider that returns the count of all objects of a certain kind in the Kubernetes cluster.
-// Caller indicates object kind by passing its "*List" GVK to `objectType`.
+// Caller indicates object kind by passing its GroupVersionResource to `objectType`.
 //
-// Example: Use {Group: "", Version: "v1", Kind: "PodList"} to get a Provider that counts all Pods in the cluster.
+// Example: Use {Group: "", Version: "v1", Resource: "pods"} to get a Provider that counts all Pods in the cluster.
 type k8sObjectCount struct {
-	cl         client.Client
-	objectType schema.GroupVersionKind
+	resource dynamic.NamespaceableResourceInterface
 
 	base
 }
 
+const (
+	defaultPageLimit = 1000
+)
+
 func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
 	var (
-		list        unstructured.UnstructuredList
-		resultCount int
+		count         int
+		continueToken string
 	)
 
-	list.SetGroupVersionKind(k.objectType)
-
-	// We could consider using the ListMeta field RemainingItemCount instead of iterating, but per v1.24 documentation
-	// it's not guaranteed to be accurate.
-	for continueToken := ""; ; continueToken = list.GetContinue() {
-		err := k.cl.List(ctx, &list, &client.ListOptions{
+	for {
+		list, err := k.resource.List(ctx, v1.ListOptions{
+			// Conservatively use a limit for paging.
+			Limit:    defaultPageLimit,
 			Continue: continueToken,
 		})
 		if err != nil {
-			return nil, k.WrapError(fmt.Errorf("failed to list %v: %w", k.objectType.String(), err))
+			return Report{}, err
 		}
 
-		resultCount += len(list.Items)
-		if list.GetContinue() == "" {
+		count += len(list.Items)
+		if continueToken = list.GetContinue(); continueToken == "" {
 			break
 		}
 	}
 
 	return Report{
-		k.Name(): resultCount,
+		k.Name(): count,
 	}, nil
 }

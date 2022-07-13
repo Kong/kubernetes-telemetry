@@ -12,7 +12,12 @@ _download_tool:
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
 .PHONY: golangci-lint
 golangci-lint: ## Download golangci-lint locally if necessary.
-	$(MAKE) _download_tool TOOL=github.com/golangci/golangci-lint/cmd/golangci-lint
+	@$(MAKE) _download_tool TOOL=github.com/golangci/golangci-lint/cmd/golangci-lint
+
+GOTESTFMT = $(PROJECT_DIR)/bin/gotestfmt
+.PHONY: gotestfmt
+gotestfmt: ## Download gotestfmt locally if necessary.
+	@$(MAKE) _download_tool TOOL=github.com/haveyoudebuggedit/gotestfmt/v2
 
 # ------------------------------------------------------------------------------
 # Build & Tests
@@ -25,3 +30,8 @@ lint: golangci-lint
 .PHONY: test.unit
 test.unit:
 	go test -count 1 -v ./...
+
+.PHONY: test.unit.pretty
+test.unit.pretty: gotestfmt
+	go test -json -count 1 -v ./... | \
+		gotestfmt -hide successful-downloads,empty-packages -showteststatus

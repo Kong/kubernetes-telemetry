@@ -10,6 +10,8 @@ import (
 	"github.com/Kong/kubernetes-telemetry/pkg/provider"
 )
 
+// Workflow defines the workflow interface which will be used either for manual
+// interaction or in programmed manner in manager.
 type Workflow interface {
 	// Name returns workflow's name.
 	Name() string
@@ -46,7 +48,7 @@ func (w *workflow) AddProvider(p provider.Provider) {
 	w.providers = append(w.providers, p)
 }
 
-// Execute executes the workflow by triggering all configured providers
+// Execute executes the workflow by triggering all configured providers.
 func (w *workflow) Execute(ctx context.Context) (provider.Report, error) {
 	var (
 		report   = provider.Report{}
