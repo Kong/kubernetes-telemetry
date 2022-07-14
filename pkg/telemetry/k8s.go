@@ -21,25 +21,32 @@ const (
 //	{
 //	  "k8s-cluster-arch": "linux/amd64",
 //	  "k8s-cluster-version": "v1.24.1-gke.1400"
+//	  "k8s-provider": "GKE"
 //	}
 func NewIdentifyPlatformWorkflow(kc kubernetes.Interface) (Workflow, error) {
 	if kc == nil {
 		return nil, ErrNilKubernetesInterfaceProvided
 	}
 
-	providerArch, err := provider.NewK8sClusterArchProvider(provider.ClusterArchKey, kc)
+	pClusterArch, err := provider.NewK8sClusterArchProvider(provider.ClusterArchKey, kc)
 	if err != nil {
 		return nil, err
 	}
 
-	providerVer, err := provider.NewK8sClusterVersionProvider(provider.ClusterVersionKey, kc)
+	pClusterVersion, err := provider.NewK8sClusterVersionProvider(provider.ClusterVersionKey, kc)
+	if err != nil {
+		return nil, err
+	}
+
+	pClusterProvider, err := provider.NewK8sClusterProviderProvider(provider.ClusterProviderKey, kc)
 	if err != nil {
 		return nil, err
 	}
 
 	w := NewWorkflow(IdentifyPlatformWorkflowName)
-	w.AddProvider(providerArch)
-	w.AddProvider(providerVer)
+	w.AddProvider(pClusterArch)
+	w.AddProvider(pClusterVersion)
+	w.AddProvider(pClusterProvider)
 
 	return w, nil
 }

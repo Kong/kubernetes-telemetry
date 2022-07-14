@@ -17,7 +17,7 @@ golangci-lint: ## Download golangci-lint locally if necessary.
 GOTESTFMT = $(PROJECT_DIR)/bin/gotestfmt
 .PHONY: gotestfmt
 gotestfmt: ## Download gotestfmt locally if necessary.
-	@$(MAKE) _download_tool TOOL=github.com/haveyoudebuggedit/gotestfmt/v2
+	@$(MAKE) _download_tool TOOL=github.com/haveyoudebuggedit/gotestfmt/v2/cmd/gotestfmt
 
 # ------------------------------------------------------------------------------
 # Build & Tests
@@ -34,4 +34,4 @@ test.unit:
 .PHONY: test.unit.pretty
 test.unit.pretty: gotestfmt
 	go test -json -count 1 -v ./... | \
-		gotestfmt -hide successful-downloads,empty-packages -showteststatus
+		$(GOTESTFMT) -hide successful-downloads,empty-packages -showteststatus
