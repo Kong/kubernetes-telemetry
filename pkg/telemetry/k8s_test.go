@@ -36,8 +36,9 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 		require.EqualValues(t, provider.Report{
 			provider.ClusterArchKey: fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 			// Not really true but a reliable return value from client-go's fake client.
-			provider.ClusterVersionKey:  "v0.0.0-master+$Format:%H$",
-			provider.ClusterProviderKey: provider.ClusterProviderUnknown,
+			provider.ClusterVersionKey:       "v0.0.0-master+$Format:%H$",
+			provider.ClusterVersionSemverKey: "v0.0.0",
+			provider.ClusterProviderKey:      provider.ClusterProviderUnknown,
 		}, r)
 
 		b, err := json.Marshal(r)

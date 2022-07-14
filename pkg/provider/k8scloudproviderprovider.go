@@ -43,7 +43,7 @@ func clusterProviderReport(ctx context.Context, kc kubernetes.Interface) (Report
 		if err != nil {
 			return nil, err
 		}
-		if p, ok := getClusterProviderFromVersion(cVersion); ok {
+		if p, ok := getClusterProviderFromVersion(cVersion.String()); ok {
 			return Report{
 				ClusterProviderKey: p,
 			}, nil

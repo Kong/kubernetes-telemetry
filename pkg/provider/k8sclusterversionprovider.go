@@ -4,13 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	utilversion "k8s.io/apimachinery/pkg/util/version"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	// ClusterVersionKey is report key under which cluster k8s version will be provided.
+	// ClusterVersionKey is the report key under which cluster k8s version will
+	// be provided as returned by the /version API.
 	ClusterVersionKey = "k8s-cluster-version"
+	// ClusterVersionSemverKey is the report key under which cluster k8s semver
+	// version will be provided.
+	ClusterVersionSemverKey = "k8s-cluster-version-semver"
 	// ClusterVersionKind represents cluster version provider kind.
 	ClusterVersionKind = Kind(ClusterVersionKey)
 )
@@ -27,8 +33,19 @@ func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report,
 		return nil, err
 	}
 
+	semver, err := utilversion.ParseGeneric(v.GitVersion)
+	if err != nil {
+		// If we fail to decode the version then let's fall back to returning just
+		// the major and minor returned from /version API.
+		return Report{
+			ClusterVersionKey:       v.GitVersion,
+			ClusterVersionSemverKey: fmt.Sprintf("v%s.%s", v.Major, v.Minor),
+		}, nil
+	}
+
 	return Report{
-		ClusterVersionKey: v,
+		ClusterVersionKey:       v.GitVersion,
+		ClusterVersionSemverKey: "v" + semver.String(),
 	}, nil
 }
 
@@ -38,11 +55,11 @@ func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report,
 // As of now it uses a simplified logic to GET the /version endpoint which
 // might be OK for most use cases but for some, more granular approach might
 // be needed to account for different versions of k8s nodes across the cluster.
-func clusterVersion(ctx context.Context, d discovery.DiscoveryInterface) (string, error) {
-	version, err := d.ServerVersion()
+func clusterVersion(ctx context.Context, d discovery.DiscoveryInterface) (*version.Info, error) {
+	v, err := d.ServerVersion()
 	if err != nil {
-		return "", fmt.Errorf("failed to get cluster version: %w", err)
+		return nil, fmt.Errorf("failed to get cluster version: %w", err)
 	}
 
-	return (version.GitVersion), nil
+	return v, nil
 }
