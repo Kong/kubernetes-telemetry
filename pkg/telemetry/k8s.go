@@ -20,7 +20,8 @@ const (
 //
 //	{
 //	  "k8s-cluster-arch": "linux/amd64",
-//	  "k8s-cluster-version": "v1.24.1-gke.1400"
+//	  "k8s-cluster-version": "v1.24.1-gke.1400",
+//	  "k8s-cluster-version-semver": "v1.24.1",
 //	  "k8s-provider": "GKE"
 //	}
 func NewIdentifyPlatformWorkflow(kc kubernetes.Interface) (Workflow, error) {
