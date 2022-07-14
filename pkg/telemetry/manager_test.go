@@ -206,6 +206,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 			"identify-platform": provider.Report{
 				"k8s-cluster-arch":    fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 				"k8s-cluster-version": "v0.0.0-master+$Format:%H$",
+				"k8s-provider":        provider.ClusterProviderUnknown,
 			},
 		}, report)
 	})
