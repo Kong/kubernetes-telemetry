@@ -37,7 +37,7 @@ func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report,
 	if err != nil {
 		// If we fail to decode the version then let's fall back to returning just
 		// the major and minor returned from /version API.
-		return Report{
+		return Report{ //nolint:nilerr
 			ClusterVersionKey:       v.GitVersion,
 			ClusterVersionSemverKey: fmt.Sprintf("v%s.%s", v.Major, v.Minor),
 		}, nil
@@ -55,7 +55,7 @@ func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report,
 // As of now it uses a simplified logic to GET the /version endpoint which
 // might be OK for most use cases but for some, more granular approach might
 // be needed to account for different versions of k8s nodes across the cluster.
-func clusterVersion(ctx context.Context, d discovery.DiscoveryInterface) (*version.Info, error) {
+func clusterVersion(ctx context.Context, d discovery.DiscoveryInterface) (*version.Info, error) { //nolint:unparam
 	v, err := d.ServerVersion()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cluster version: %w", err)
