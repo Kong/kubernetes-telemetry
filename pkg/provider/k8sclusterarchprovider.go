@@ -39,7 +39,7 @@ func clusterArchReport(ctx context.Context, kc kubernetes.Interface) (Report, er
 // might be OK for most use cases but for some, more granular approach might
 // be needed to account for different versions/architectures of k8s nodes across
 // the cluster.
-func clusterArch(ctx context.Context, d discovery.DiscoveryInterface) (string, error) {
+func clusterArch(ctx context.Context, d discovery.DiscoveryInterface) (string, error) { //nolint:unparam
 	version, err := d.ServerVersion()
 	if err != nil {
 		return "", fmt.Errorf("failed to get cluster architecture: %w", err)
