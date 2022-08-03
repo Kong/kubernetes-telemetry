@@ -153,7 +153,7 @@ func TestClusterProvider(t *testing.T) {
 				return clientgo_fake.NewSimpleClientset(
 					&corev1.Node{
 						Spec: corev1.NodeSpec{
-							ProviderID: "providerID: aws:///eu-west-1b/i-0fa11111111111111",
+							ProviderID: "aws:///eu-west-1b/i-0fa11111111111111",
 						},
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
@@ -249,6 +249,31 @@ func TestClusterProvider(t *testing.T) {
 				return kc
 			},
 			expected: ClusterProviderAWS,
+		},
+		// kind
+		{
+			name: "kind gets inferred from provider ID prefix",
+			clientFunc: func() *clientgo_fake.Clientset {
+				return clientgo_fake.NewSimpleClientset(
+					&corev1.Node{
+						Spec: corev1.NodeSpec{
+							ProviderID: "kind://docker/kong/kong-control-plane",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"beta.kubernetes.io/arch":                                 "arm64",
+								"beta.kubernetes.io/os":                                   "linux",
+								"kubernetes.io/arch":                                      "arm64",
+								"kubernetes.io/hostname":                                  "kong-control-plane",
+								"kubernetes.io/os":                                        "linux",
+								"node-role.kubernetes.io/control-plane":                   "",
+								"node.kubernetes.io/exclude-from-external-load-balancers": "",
+							},
+						},
+					},
+				)
+			},
+			expected: ClusterProviderKubernetesInDocker,
 		},
 	}
 

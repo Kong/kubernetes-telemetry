@@ -4,6 +4,7 @@ import (
 	"context"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 )
 
@@ -12,6 +13,7 @@ import (
 //
 // Example: Use {Group: "", Version: "v1", Resource: "pods"} to get a Provider that counts all Pods in the cluster.
 type k8sObjectCount struct {
+	gvk      schema.GroupVersionResource
 	resource dynamic.NamespaceableResourceInterface
 
 	base
@@ -34,7 +36,7 @@ func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
 			Continue: continueToken,
 		})
 		if err != nil {
-			return Report{}, err
+			return Report{}, k.WrapError(err)
 		}
 
 		count += len(list.Items)
@@ -44,6 +46,6 @@ func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
 	}
 
 	return Report{
-		k.Name(): count,
+		ReportKey("k8s_" + k.gvk.Resource + "_count"): count,
 	}, nil
 }

@@ -11,7 +11,7 @@ import (
 
 const (
 	// ClusterProviderKey is report key under which the cluster provider will be provided.
-	ClusterProviderKey = "k8s-provider"
+	ClusterProviderKey = ReportKey("k8s_provider")
 	// ClusterProviderKind represents cluster provider kind.
 	ClusterProviderKind = Kind(ClusterProviderKey)
 )
@@ -24,6 +24,8 @@ const (
 	ClusterProviderGKE = ClusterProvider("GKE")
 	// ClusterProviderAWS identifies Amazon's AWS cluster provider.
 	ClusterProviderAWS = ClusterProvider("AWS")
+	// ClusterProviderKubernetesInDocker identifies kind (kubernetes in docker) as cluster provider.
+	ClusterProviderKubernetesInDocker = ClusterProvider("kind")
 	// ClusterProviderUnknown represents an unknown cluster provider.
 	ClusterProviderUnknown = ClusterProvider("UNKNOWN")
 )
@@ -116,8 +118,9 @@ func getClusterProviderFromNodes(nodeList *corev1.NodeList) (ClusterProvider, bo
 func getClusterProviderFromNodesProviderID(nodeList *corev1.NodeList) (ClusterProvider, bool) {
 	const (
 		// Nodes on GKE are provided by GCE (Google Compute Engine)
-		providerIDPrefixGKE = "gce"
-		providerIDPrefixAWS = "aws"
+		providerIDPrefixGKE  = "gce"
+		providerIDPrefixAWS  = "aws"
+		providerIDPrefixKind = "kind"
 	)
 	d := make(clusterProviderDistribution)
 	for _, n := range nodeList.Items {
@@ -127,6 +130,10 @@ func getClusterProviderFromNodesProviderID(nodeList *corev1.NodeList) (ClusterPr
 		}
 		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixAWS) {
 			d[ClusterProviderAWS]++
+			continue
+		}
+		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixKind) {
+			d[ClusterProviderKubernetesInDocker]++
 			continue
 		}
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/puzpuzpuz/xsync"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 type managerErr string
@@ -29,10 +30,6 @@ const (
 	ErrCantAddConsumersAfterStart = managerErr("can't add consumers after start")
 )
 
-// Report represents a report that is returned by executing managers workflows.
-// This is also the type that is being sent out to consumers.
-type Report map[string]provider.Report
-
 const (
 	// DefaultWorkflowTickPeriod is the default tick period with which the manager
 	// will trigger configured workflows execution.
@@ -49,9 +46,9 @@ type manager struct {
 
 	// consumers is a slice of channels that will consume reports produced by
 	// execution of workflows.
-	consumers []chan<- Report
+	consumers []chan<- types.Report
 
-	ch      chan Report
+	ch      chan types.Report
 	once    sync.Once
 	logger  logr.Logger
 	done    chan struct{}
@@ -76,12 +73,13 @@ type Manager interface {
 	Stop()
 	// AddConsumer adds a consumer of telemetry data provided by configured
 	// workflows' providers.
-	AddConsumer(ch chan<- Report) error
+	// AddConsumer(ch chan<- Report) error
+	AddConsumer(c Consumer) error
 	// AddWorkflow adds a workflow with providers which will provide telemetry data.
 	AddWorkflow(Workflow)
 	// Execute executes all workflows and returns an aggregated report from those
 	// workflows.
-	Execute(context.Context) (Report, error)
+	Execute(context.Context) (types.Report, error)
 }
 
 // NewManager creates a new manager configured via the provided options.
@@ -89,8 +87,8 @@ func NewManager(opts ...OptManager) (Manager, error) {
 	m := &manager{
 		workflows: xsync.NewMapOf[Workflow](),
 		period:    DefaultWorkflowTickPeriod,
-		consumers: []chan<- Report{},
-		ch:        make(chan Report),
+		consumers: []chan<- types.Report{},
+		ch:        make(chan types.Report),
 		logger:    defaultLogger(),
 		done:      make(chan struct{}),
 	}
@@ -130,12 +128,20 @@ func (m *manager) Stop() {
 	})
 }
 
+// Consumer is an entity that can consume telemetry reports on a channel returned
+// by Intake().
+type Consumer interface {
+	Intake() chan<- types.Report
+	Close()
+}
+
 // AddConsumer adds a consumer.
-func (m *manager) AddConsumer(ch chan<- Report) error {
+func (m *manager) AddConsumer(c Consumer) error {
+	// func (m *manager) AddConsumer(ch chan<- Report) error {
 	if atomic.LoadInt32(&m.started) > 0 {
 		return ErrCantAddConsumersAfterStart
 	}
-	m.consumers = append(m.consumers, ch)
+	m.consumers = append(m.consumers, c.Intake())
 	return nil
 }
 
@@ -174,10 +180,10 @@ func (m *manager) workflowsLoop() {
 
 // Execute executes all configures workflows and returns an aggregated report
 // from all the underying providers.
-func (m *manager) Execute(ctx context.Context) (Report, error) {
+func (m *manager) Execute(ctx context.Context) (types.Report, error) {
 	var (
 		err    error
-		report = Report{}
+		report = types.Report{}
 	)
 
 	m.workflows.Range(func(name string, v Workflow) bool {
