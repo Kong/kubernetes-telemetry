@@ -19,27 +19,27 @@ const (
 // Exemplar report produced:
 //
 //	{
-//	  "k8s-cluster-arch": "linux/amd64",
-//	  "k8s-cluster-version": "v1.24.1-gke.1400",
-//	  "k8s-cluster-version-semver": "v1.24.1",
-//	  "k8s-provider": "GKE"
+//	  "k8sv": "linux/amd64",
+//	  "k8sv": "v1.24.1-gke.1400",
+//	  "k8sv_semver": "v1.24.1",
+//	  "k8s_provider": "GKE"
 //	}
 func NewIdentifyPlatformWorkflow(kc kubernetes.Interface) (Workflow, error) {
 	if kc == nil {
 		return nil, ErrNilKubernetesInterfaceProvided
 	}
 
-	pClusterArch, err := provider.NewK8sClusterArchProvider(provider.ClusterArchKey, kc)
+	pClusterArch, err := provider.NewK8sClusterArchProvider(string(provider.ClusterArchKey), kc)
 	if err != nil {
 		return nil, err
 	}
 
-	pClusterVersion, err := provider.NewK8sClusterVersionProvider(provider.ClusterVersionKey, kc)
+	pClusterVersion, err := provider.NewK8sClusterVersionProvider(string(provider.ClusterVersionKey), kc)
 	if err != nil {
 		return nil, err
 	}
 
-	pClusterProvider, err := provider.NewK8sClusterProviderProvider(provider.ClusterProviderKey, kc)
+	pClusterProvider, err := provider.NewK8sClusterProviderProvider(string(provider.ClusterProviderKey), kc)
 	if err != nil {
 		return nil, err
 	}
@@ -63,19 +63,19 @@ const (
 // Exemplar report produced:
 //
 //	{
-//	  "k8s-pod-count": 21,
-//	  "k8s-service-count": 3
+//	  "k8s_pods_count": 21,
+//	  "k8s_services_count": 3
 //	}
 func NewClusterStateWorkflow(d dynamic.Interface) (Workflow, error) {
 	if d == nil {
 		return nil, ErrNilDynClientProvided
 	}
 
-	providerPodCount, err := provider.NewK8sPodCountProvider(provider.PodCountKey, d)
+	providerPodCount, err := provider.NewK8sPodCountProvider(string(provider.PodCountKey), d)
 	if err != nil {
 		return nil, err
 	}
-	providerServiceCount, err := provider.NewK8sServiceCountProvider(provider.ServiceCountKey, d)
+	providerServiceCount, err := provider.NewK8sServiceCountProvider(string(provider.ServiceCountKey), d)
 	if err != nil {
 		return nil, err
 	}

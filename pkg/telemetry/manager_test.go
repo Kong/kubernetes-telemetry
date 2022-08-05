@@ -14,7 +14,10 @@ import (
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 
+	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/serializers"
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 func TestManagerStartStopDoesntFail(t *testing.T) {
@@ -51,20 +54,21 @@ func TestManagerBasicLogicWorks(t *testing.T) {
 		m.AddWorkflow(w)
 	}
 
-	ch := make(chan Report)
-	require.NoError(t, m.AddConsumer(ch))
+	consumer := NewConsumer(serializers.NewSemicolonDelimited("ping"), forwarders.NewDiscardForwarder())
+
+	require.NoError(t, m.AddConsumer(consumer))
 	require.NoError(t, m.Start())
 	require.ErrorIs(t, m.Start(), ErrManagerAlreadyStarted,
 		"subsequent starts of the manager should return an error",
 	)
-	require.ErrorIs(t, m.AddConsumer(make(chan<- Report)),
+	require.ErrorIs(t, m.AddConsumer(consumer),
 		ErrCantAddConsumersAfterStart,
 		"cannot add consumers after start",
 	)
 
-	report := <-ch
+	report := <-consumer.ch
 	m.Stop()
-	require.EqualValues(t, Report{
+	require.EqualValues(t, types.Report{
 		"basic1": provider.Report{
 			"constant1": "value1",
 			"constant2": "value2",
@@ -118,20 +122,22 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 		m.AddWorkflow(w)
 	}
 
-	ch := make(chan Report)
-	require.NoError(t, m.AddConsumer(ch))
+	consumer := NewConsumer(serializers.NewSemicolonDelimited("ping"), forwarders.NewDiscardForwarder())
+	require.NoError(t, m.AddConsumer(consumer))
+
 	require.NoError(t, m.Start())
 	require.ErrorIs(t, m.Start(), ErrManagerAlreadyStarted,
 		"subsequent starts of the manager should return an error",
 	)
-	require.ErrorIs(t, m.AddConsumer(make(chan<- Report)),
+	require.ErrorIs(t, m.AddConsumer(consumer),
 		ErrCantAddConsumersAfterStart,
 		"cannot add consumers after start",
 	)
 
+	ch := consumer.ch
 	report := <-ch
 	m.Stop()
-	require.EqualValues(t, Report{
+	require.EqualValues(t, types.Report{
 		"basic1": provider.Report{
 			"constant1": "value1",
 			"constant2": "value2",
@@ -191,23 +197,23 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 		m.AddWorkflow(clusterStateWorkflow)
 		m.AddWorkflow(identifyPlatformWorkflow)
 
-		ch := make(chan Report)
-		require.NoError(t, m.AddConsumer(ch))
+		consumer := NewConsumer(serializers.NewSemicolonDelimited("ping"), forwarders.NewDiscardForwarder())
+		require.NoError(t, m.AddConsumer(consumer))
 		require.NoError(t, m.Start())
 
-		report := <-ch
+		report := <-consumer.ch
 		m.Stop()
 
-		require.EqualValues(t, Report{
+		require.EqualValues(t, types.Report{
 			"cluster-state": provider.Report{
-				"k8s-pod-count":     1,
-				"k8s-service-count": 2,
+				"k8s_pods_count":     1,
+				"k8s_services_count": 2,
 			},
 			"identify-platform": provider.Report{
-				"k8s-cluster-arch":           fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-				"k8s-cluster-version":        "v0.0.0-master+$Format:%H$",
-				"k8s-cluster-version-semver": "v0.0.0",
-				"k8s-provider":               provider.ClusterProviderUnknown,
+				"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+				"k8sv":         "v0.0.0-master+$Format:%H$",
+				"k8sv_semver":  "v0.0.0",
+				"k8s_provider": provider.ClusterProviderUnknown,
 			},
 		}, report)
 	})

@@ -1,7 +1,10 @@
 package provider
 
+// ReportKey represents a key type for providers' reports.
+type ReportKey string
+
 // Report represents a report from a provider.
-type Report map[string]any
+type Report map[ReportKey]any
 
 // Merge merges the report with a different report overriding already existing
 // entries if there's a collision.

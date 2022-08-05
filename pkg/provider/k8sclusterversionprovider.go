@@ -13,10 +13,10 @@ import (
 const (
 	// ClusterVersionKey is the report key under which cluster k8s version will
 	// be provided as returned by the /version API.
-	ClusterVersionKey = "k8s-cluster-version"
+	ClusterVersionKey = ReportKey("k8sv")
 	// ClusterVersionSemverKey is the report key under which cluster k8s semver
 	// version will be provided.
-	ClusterVersionSemverKey = "k8s-cluster-version-semver"
+	ClusterVersionSemverKey = ReportKey("k8sv_semver")
 	// ClusterVersionKind represents cluster version provider kind.
 	ClusterVersionKind = Kind(ClusterVersionKey)
 )
