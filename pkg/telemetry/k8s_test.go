@@ -14,7 +14,7 @@ import (
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/Kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/provider"
 )
 
 func TestWorkflowIdentifyPlatform(t *testing.T) {

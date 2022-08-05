@@ -1,4 +1,4 @@
-module github.com/Kong/kubernetes-telemetry
+module github.com/kong/kubernetes-telemetry
 
 go 1.18
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gammazero/workerpool"
 
-	"github.com/Kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/provider"
 )
 
 // Workflow defines the workflow interface which will be used either for manual

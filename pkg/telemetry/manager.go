@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/puzpuzpuz/xsync"
 
-	"github.com/Kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/provider"
 )
 
 type managerErr string
