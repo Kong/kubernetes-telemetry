@@ -191,6 +191,9 @@ func (m *manager) Execute(ctx context.Context) (types.Report, error) {
 		r, err = v.Execute(ctx)
 		if err != nil {
 			err = errors.Wrapf(err, "error executing workflow %s", name)
+			// TODO: return true and don't abort when encountering an error.
+			// Better to report partial report than nothing. In order to do so
+			// use an error agreggator like https://github.com/hashicorp/go-multierror.
 			return false
 		}
 

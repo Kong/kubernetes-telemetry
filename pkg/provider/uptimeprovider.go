@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+const (
+	// UptimeKey is the report key that under which one can find uptime.
+	UptimeKey = ReportKey("uptime")
+)
+
 // NewUptimeProvider provides new uptime provider which will return uptime counted
 // since the provider creation time.
 func NewUptimeProvider(name string) (Provider, error) {
@@ -11,7 +16,7 @@ func NewUptimeProvider(name string) (Provider, error) {
 	return &functor{
 		f: func() (Report, error) {
 			return Report{
-				"uptime": int(time.Since(start).Truncate(time.Second).Seconds()),
+				UptimeKey: int(time.Since(start).Truncate(time.Second).Seconds()),
 			}, nil
 		},
 		base: base{

@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,12 @@ func TestWorkflowState(t *testing.T) {
 
 	r, err := w.Execute(context.Background())
 	require.NoError(t, err)
+
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
 	require.EqualValues(t, provider.Report{
 		"uptime": 0,
+		"hn":     hostname,
 	}, r)
 }
