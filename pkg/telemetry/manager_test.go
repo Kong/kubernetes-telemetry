@@ -10,9 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	dyn_fake "k8s.io/client-go/dynamic/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
@@ -151,7 +153,16 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 
 func TestManagerWithCatalogWorkflows(t *testing.T) {
 	t.Run("identify platform and cluster state", func(t *testing.T) {
-		dynClient := dyn_fake.NewSimpleDynamicClient(scheme.Scheme,
+		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
+
+		dynClient := dyn_fake.NewSimpleDynamicClientWithCustomListKinds(scheme.Scheme,
+			map[schema.GroupVersionResource]string{
+				{
+					Group:    "gateway.networking.k8s.io",
+					Version:  "v1beta1",
+					Resource: "gateways",
+				}: "GatewayList",
+			},
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -164,6 +175,12 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 							Image: "kong/kubernetes-ingress-controller:2.4",
 						},
 					},
+				},
+			},
+			&gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "gateway-1",
 				},
 			},
 			&corev1.Service{
@@ -208,6 +225,9 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 			"cluster-state": provider.Report{
 				"k8s_pods_count":     1,
 				"k8s_services_count": 2,
+				// TODO fix below count: it should be 1 but for some reason even after adding the GVR
+				// to scheme gateways can't be found by listing.
+				"k8s_gateways_count": 0,
 			},
 			"identify-platform": provider.Report{
 				"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),

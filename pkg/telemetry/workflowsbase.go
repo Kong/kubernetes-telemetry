@@ -17,9 +17,14 @@ func NewStateWorkflow() (Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
+	hostnameProvider, err := provider.NewHostnameProvider("hostname")
+	if err != nil {
+		return nil, err
+	}
 
 	w := NewWorkflow(StateWorkflowName)
 	w.AddProvider(uptimeProvider)
+	w.AddProvider(hostnameProvider)
 
 	return w, nil
 }
