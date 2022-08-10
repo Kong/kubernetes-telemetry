@@ -1,12 +1,15 @@
 package telemetry
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/bombsimon/logrusr/v3"
 	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -237,4 +240,64 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 			},
 		}, report)
 	})
+}
+
+func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
+	logrusLog := logrus.New()
+	logrusLog.Level = logrus.DebugLevel
+	log := logrusr.New(logrusLog)
+	m, err := NewManager(
+		OptManagerLogger(log),
+		OptManagerPeriod(time.Millisecond),
+	)
+	require.NoError(t, err)
+
+	{
+		w := NewWorkflow("basic")
+		{
+			p, err := provider.NewFixedValueProvider("constant1", provider.Report{
+				"constant1": "value1",
+			})
+			require.NoError(t, err)
+			w.AddProvider(p)
+		}
+
+		m.AddWorkflow(w)
+	}
+	{
+		w := NewWorkflow("basic_with_error")
+		{
+			p, err := provider.NewFunctorProvider("error_provider", func() (provider.Report, error) {
+				return nil, errors.New("I am an error")
+			})
+			require.NoError(t, err)
+			w.AddProvider(p)
+		}
+		{
+
+			p, err := provider.NewFixedValueProvider("constant2", provider.Report{
+				"constant2": "value2",
+			})
+			require.NoError(t, err)
+			w.AddProvider(p)
+		}
+
+		m.AddWorkflow(w)
+	}
+
+	ch := make(chan types.Report)
+	consumer := NewRawConsumer(forwarders.NewRawChannelForwarder(ch))
+	require.NoError(t, m.AddConsumer(consumer))
+	require.NoError(t, m.Start())
+
+	report := <-ch
+	m.Stop()
+	require.EqualValues(t, types.Report{
+		"basic": provider.Report{
+			"constant1": "value1",
+		},
+		"basic_with_error": provider.Report{
+			"constant2": "value2",
+		},
+	}, report)
 }

@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
+
+	"github.com/kong/kubernetes-telemetry/pkg/log"
 )
 
 const (
@@ -20,32 +21,14 @@ var tlsConf = tls.Config{
 	MaxVersion: tls.VersionTLS13,
 }
 
-// TODO: Address logging levels and library to be used.
-// See: https://github.com/Kong/kubernetes-ingress-controller/issues/1893
-const (
-	logrusrDiff = 4
-
-	// InfoLevel is the converted logging level from logrus to go-logr for
-	// information level logging. Note that the logrusr middleware technically
-	// flattens all levels prior to this level into this level as well.
-	InfoLevel = int(logrus.InfoLevel) - logrusrDiff
-
-	// DebugLevel is the converted logging level from logrus to go-logr for
-	// debug level logging.
-	DebugLevel = int(logrus.DebugLevel) - logrusrDiff
-
-	// WarnLevel is the converted logrus level to go-logr for warnings.
-	WarnLevel = int(logrus.WarnLevel) - logrusrDiff
-)
-
 type tlsForwarder struct {
-	log  logr.Logger
-	conn *tls.Conn
+	logger logr.Logger
+	conn   *tls.Conn
 }
 
 // NewTLSForwarder creates a TLS forwarder which forwards received serialized reports
 // to a TLS endpoint specified by the provided address.
-func NewTLSForwarder(address string, log logr.Logger) *tlsForwarder {
+func NewTLSForwarder(address string, logger logr.Logger) *tlsForwarder {
 	conn, err := tls.DialWithDialer(
 		&net.Dialer{
 			Timeout: defaultTimeout,
@@ -55,13 +38,13 @@ func NewTLSForwarder(address string, log logr.Logger) *tlsForwarder {
 		&tlsConf,
 	)
 	if err != nil {
-		log.V(DebugLevel).Info("failed to connect to reporting server", "error", err)
+		logger.V(log.DebugLevel).Info("failed to connect to reporting server", "error", err)
 		return nil
 	}
 
 	return &tlsForwarder{
-		log:  log,
-		conn: conn,
+		logger: logger,
+		conn:   conn,
 	}
 }
 
