@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
+	"github.com/hashicorp/go-multierror"
 	"github.com/puzpuzpuz/xsync"
 
-	"github.com/kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/log"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
@@ -165,7 +165,14 @@ func (m *manager) workflowsLoop() {
 		case <-ticker.C:
 			report, err := m.Execute(context.Background())
 			if err != nil {
-				m.logger.Error(err, "error executing workflows")
+				m.logger.V(log.DebugLevel).
+					WithValues("error", err.Error()).
+					Info("error executing workflows")
+			}
+
+			// Continue the execution even if we get an error but account for possibility
+			// of getting nil reports, in which case move on to the next iteration (tick).
+			if report == nil {
 				continue
 			}
 
@@ -179,28 +186,27 @@ func (m *manager) workflowsLoop() {
 }
 
 // Execute executes all configures workflows and returns an aggregated report
-// from all the underying providers.
+// from all the underlying providers.
 func (m *manager) Execute(ctx context.Context) (types.Report, error) {
 	var (
-		err    error
+		mErr   error
 		report = types.Report{}
 	)
 
 	m.workflows.Range(func(name string, v Workflow) bool {
-		var r provider.Report
-		r, err = v.Execute(ctx)
+		r, err := v.Execute(ctx)
 		if err != nil {
-			err = errors.Wrapf(err, "error executing workflow %s", name)
-			// TODO: return true and don't abort when encountering an error.
-			// Better to report partial report than nothing. In order to do so
-			// use an error agreggator like https://github.com/hashicorp/go-multierror.
-			return false
+			mErr = multierror.Append(mErr, err)
 		}
 
-		report[v.Name()] = r
+		// Add the report regardless if it's partial only omitting empty (nil) reports.
+		if r != nil {
+			report[v.Name()] = r
+		}
+
 		return true
 	})
-	return report, err
+	return report, mErr
 }
 
 // consumerLoop loops over all configured consumers and sends the gathered telemetry

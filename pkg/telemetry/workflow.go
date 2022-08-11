@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	"github.com/gammazero/workerpool"
+	"github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 )
@@ -62,17 +64,15 @@ func (w *workflow) Execute(ctx context.Context) (provider.Report, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	wg.Add(len(w.providers))
 	for _, provider := range w.providers {
 		p := provider
-		wg.Add(1)
-
 		wp.Submit(func() {
 			defer wg.Done()
 
 			report, err := p.Provide(ctx)
 			if err != nil {
-				chErr <- err
-				return
+				chErr <- errors.Wrapf(err, "problem with provider %s", p.Name())
 			}
 
 			chReport <- report
@@ -86,12 +86,16 @@ func (w *workflow) Execute(ctx context.Context) (provider.Report, error) {
 		close(chReport)
 	}()
 
+	var mErr error
+
 forLoop:
 	for {
 		select {
 		case err := <-chErr:
 			if err != nil {
-				return nil, err
+				mErr = multierror.Append(mErr,
+					errors.Wrapf(err, "error executing workflow %s", w.Name()),
+				)
 			}
 		case r := <-chReport:
 			report.Merge(r)
@@ -100,5 +104,5 @@ forLoop:
 		}
 	}
 
-	return report, nil
+	return report, mErr
 }
