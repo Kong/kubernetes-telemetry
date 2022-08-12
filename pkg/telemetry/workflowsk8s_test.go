@@ -98,6 +98,48 @@ func TestWorkflowClusterState(t *testing.T) {
 					Name:      "gateway-1",
 				},
 			},
+
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"kubeadm.alpha.kubernetes.io/cri-socket":                 "unix:///run/containerd/containerd.sock",
+						"node.alpha.kubernetes.io/ttl":                           "0",
+						"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+					},
+					Labels: map[string]string{
+						"beta.kubernetes.io/arch":                                 "arm64",
+						"beta.kubernetes.io/os":                                   "linux",
+						"kubernetes.io/arch":                                      "arm64",
+						"kubernetes.io/hostname":                                  "kong-control-plane",
+						"kubernetes.io/os":                                        "linux",
+						"node-role.kubernetes.io/control-plane":                   "",
+						"node.kubernetes.io/exclude-from-external-load-balancers": "",
+					},
+					Name: "kong-control-plane",
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "gce://k8s/europe-north1-a/gke-cluster-user-default-pool-e1111111-aaii",
+				},
+			},
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"kubeadm.alpha.kubernetes.io/cri-socket":                 "unix:///run/containerd/containerd.sock",
+						"node.alpha.kubernetes.io/ttl":                           "0",
+						"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+					},
+					Labels: map[string]string{
+						"beta.kubernetes.io/arch":                                 "arm64",
+						"beta.kubernetes.io/os":                                   "linux",
+						"kubernetes.io/arch":                                      "arm64",
+						"kubernetes.io/hostname":                                  "worker-node-1",
+						"kubernetes.io/os":                                        "linux",
+						"node-role.kubernetes.io/control-plane":                   "",
+						"node.kubernetes.io/exclude-from-external-load-balancers": "",
+					},
+					Name: "worker-node-1",
+				},
+			},
 		)
 
 		w, err := NewClusterStateWorkflow(dynClient)
@@ -108,6 +150,7 @@ func TestWorkflowClusterState(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, r)
 		require.EqualValues(t, provider.Report{
+			provider.NodeCountKey:    2,
 			provider.PodCountKey:     1,
 			provider.ServiceCountKey: 2,
 			// TODO fix below count: it should be 1 but for some reason even after adding the GVR

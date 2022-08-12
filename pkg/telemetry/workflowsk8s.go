@@ -65,7 +65,8 @@ const (
 //	{
 //	  "k8s_pods_count": 21,
 //	  "k8s_services_count": 3,
-//	  "k8s_gateways_count": 1
+//	  "k8s_gateways_count": 1,
+//	  "k8s_nodes_count": 1
 //	}
 func NewClusterStateWorkflow(d dynamic.Interface) (Workflow, error) {
 	if d == nil {
@@ -84,11 +85,16 @@ func NewClusterStateWorkflow(d dynamic.Interface) (Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
+	providerNodeCount, err := provider.NewK8sNodeCountProvider(string(provider.NodeCountKey), d)
+	if err != nil {
+		return nil, err
+	}
 
 	w := NewWorkflow(ClusterStateWorkflowName)
 	w.AddProvider(providerPodCount)
 	w.AddProvider(providerServiceCount)
 	w.AddProvider(providerGatewayCount)
+	w.AddProvider(providerNodeCount)
 
 	return w, nil
 }
