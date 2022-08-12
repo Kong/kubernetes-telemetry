@@ -158,12 +158,15 @@ func (m *manager) workflowsLoop() {
 	defer ticker.Stop()
 
 	for {
+		ctx, cancel := context.WithTimeout(context.Background(), m.period)
+
 		select {
 		case <-m.done:
+			cancel()
 			return
 
 		case <-ticker.C:
-			report, err := m.Execute(context.Background())
+			report, err := m.Execute(ctx)
 			if err != nil {
 				m.logger.V(log.DebugLevel).
 					WithValues("error", err.Error()).
@@ -173,14 +176,17 @@ func (m *manager) workflowsLoop() {
 			// Continue the execution even if we get an error but account for possibility
 			// of getting nil reports, in which case move on to the next iteration (tick).
 			if report == nil {
+				cancel()
 				continue
 			}
 
 			select {
 			case m.ch <- report:
 			case <-m.done:
+				cancel()
 				break
 			}
+			cancel()
 		}
 	}
 }

@@ -11,7 +11,7 @@ type functor struct {
 
 // ReportFunctor defines a function type that functor provider accepts as means
 // for delivering telemetry data.
-type ReportFunctor func() (Report, error)
+type ReportFunctor func(context.Context) (Report, error)
 
 var _ Provider = (*functor)(nil)
 
@@ -29,5 +29,5 @@ func NewFunctorProvider(name string, f ReportFunctor) (Provider, error) {
 
 // Provide returns the Report as returned by the configured functor.
 func (p *functor) Provide(ctx context.Context) (Report, error) {
-	return p.f()
+	return p.f(ctx)
 }

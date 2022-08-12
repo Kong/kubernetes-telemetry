@@ -1,6 +1,7 @@
 package forwarders
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -52,8 +53,15 @@ func (tf *tlsForwarder) Name() string {
 	return "TLSForwarder"
 }
 
-func (tf *tlsForwarder) Forward(payload []byte) error {
-	err := tf.conn.SetDeadline(time.Now().Add(defaultDeadline))
+func (tf *tlsForwarder) Forward(ctx context.Context, payload []byte) error {
+	var deadline time.Time
+	if d, ok := ctx.Deadline(); ok {
+		deadline = d
+	} else {
+		deadline = time.Now().Add(defaultDeadline)
+	}
+
+	err := tf.conn.SetDeadline(deadline)
 	if err != nil {
 		return fmt.Errorf("failed to set report connection deadline: %w", err)
 	}

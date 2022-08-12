@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"time"
 )
 
@@ -14,7 +15,7 @@ const (
 func NewUptimeProvider(name string) (Provider, error) {
 	start := time.Now()
 	return &functor{
-		f: func() (Report, error) {
+		f: func(ctx context.Context) (Report, error) {
 			return Report{
 				UptimeKey: int(time.Since(start).Truncate(time.Second).Seconds()),
 			}, nil

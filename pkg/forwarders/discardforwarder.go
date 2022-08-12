@@ -1,5 +1,7 @@
 package forwarders
 
+import "context"
+
 type discardForwarder struct{}
 
 // NewDiscardForwarder creates a new discardForwarder which discards all received
@@ -12,6 +14,6 @@ func (df *discardForwarder) Name() string {
 	return "DiscardForwarder"
 }
 
-func (df *discardForwarder) Forward(payload []byte) error {
+func (df *discardForwarder) Forward(ctx context.Context, payload []byte) error {
 	return nil
 }

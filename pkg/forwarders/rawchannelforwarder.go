@@ -1,6 +1,8 @@
 package forwarders
 
 import (
+	"context"
+
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
@@ -19,7 +21,12 @@ func (f *rawChannelForwarder) Name() string {
 	return "LogForwarder"
 }
 
-func (f *rawChannelForwarder) Forward(r types.Report) error {
-	f.ch <- r
+func (f *rawChannelForwarder) Forward(ctx context.Context, r types.Report) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case f.ch <- r:
+	}
+
 	return nil
 }
