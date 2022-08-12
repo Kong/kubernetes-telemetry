@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"os"
 )
 
@@ -12,7 +13,7 @@ const (
 // NewHostnameProvider creates hostname provider.
 func NewHostnameProvider(name string) (Provider, error) {
 	return &functor{
-		f: func() (Report, error) {
+		f: func(ctx context.Context) (Report, error) {
 			hostname, err := os.Hostname()
 			if err != nil {
 				return nil, err

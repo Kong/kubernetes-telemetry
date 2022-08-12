@@ -1,6 +1,8 @@
 package forwarders
 
 import (
+	"context"
+
 	"github.com/go-logr/logr"
 )
 
@@ -20,7 +22,7 @@ func (lf *logForwarder) Name() string {
 	return "LogForwarder"
 }
 
-func (lf *logForwarder) Forward(payload []byte) error {
+func (lf *logForwarder) Forward(ctx context.Context, payload []byte) error {
 	lf.log.Info("got a report", "report", payload)
 	return nil
 }

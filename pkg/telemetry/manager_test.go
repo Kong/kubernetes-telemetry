@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -267,9 +268,11 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 	{
 		w := NewWorkflow("basic_with_error")
 		{
-			p, err := provider.NewFunctorProvider("error_provider", func() (provider.Report, error) {
-				return nil, errors.New("I am an error")
-			})
+			p, err := provider.NewFunctorProvider("error_provider",
+				func(context.Context) (provider.Report, error) {
+					return nil, errors.New("I am an error")
+				},
+			)
 			require.NoError(t, err)
 			w.AddProvider(p)
 		}
