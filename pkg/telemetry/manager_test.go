@@ -199,6 +199,25 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 					Name:      "srv",
 				},
 			},
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"kubeadm.alpha.kubernetes.io/cri-socket":                 "unix:///run/containerd/containerd.sock",
+						"node.alpha.kubernetes.io/ttl":                           "0",
+						"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+					},
+					Labels: map[string]string{
+						"beta.kubernetes.io/arch":                                 "arm64",
+						"beta.kubernetes.io/os":                                   "linux",
+						"kubernetes.io/arch":                                      "arm64",
+						"kubernetes.io/hostname":                                  "worker-node-1",
+						"kubernetes.io/os":                                        "linux",
+						"node-role.kubernetes.io/control-plane":                   "",
+						"node.kubernetes.io/exclude-from-external-load-balancers": "",
+					},
+					Name: "worker-node-1",
+				},
+			},
 		)
 		clusterStateWorkflow, err := NewClusterStateWorkflow(dynClient)
 		require.NoError(t, err)
@@ -227,6 +246,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 
 		require.EqualValues(t, types.Report{
 			"cluster-state": provider.Report{
+				"k8s_nodes_count":    1,
 				"k8s_pods_count":     1,
 				"k8s_services_count": 2,
 				// TODO fix below count: it should be 1 but for some reason even after adding the GVR

@@ -1,0 +1,34 @@
+package provider
+
+import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+)
+
+const (
+	// NodeCountKey is the report key under which the number of nodes in the cluster
+	// will be provided.
+	NodeCountKey = ReportKey("k8s_nodes_count")
+	// NodeCountKind represents the node count provider kind.
+	NodeCountKind = Kind(NodeCountKey)
+)
+
+// NewK8sNodeCountProvider creates telemetry data provider that will query the
+// configured k8s cluster - using the provided client - to get a node count from
+// the cluster.
+func NewK8sNodeCountProvider(name string, d dynamic.Interface) (Provider, error) {
+	gvk := schema.GroupVersionResource{
+		Group:    "",
+		Version:  "v1",
+		Resource: "nodes",
+	}
+
+	return &k8sObjectCount{
+		resource: d.Resource(gvk),
+		gvk:      gvk,
+		base: base{
+			name: name,
+			kind: NodeCountKind,
+		},
+	}, nil
+}
