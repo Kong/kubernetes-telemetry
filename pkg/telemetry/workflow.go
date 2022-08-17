@@ -47,6 +47,9 @@ func (w *workflow) Name() string {
 
 // AddProvider adds provider to the list of configured providers.
 func (w *workflow) AddProvider(p provider.Provider) {
+	if p == nil {
+		return
+	}
 	w.providers = append(w.providers, p)
 }
 

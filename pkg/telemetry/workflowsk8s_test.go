@@ -10,10 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dyn_fake "k8s.io/client-go/dynamic/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
@@ -51,21 +53,14 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 
 func TestWorkflowClusterState(t *testing.T) {
 	t.Run("providing nil dynamic client fails", func(t *testing.T) {
-		_, err := NewClusterStateWorkflow(nil)
+		_, err := NewClusterStateWorkflow(nil, nil)
 		require.ErrorIs(t, err, ErrNilDynClientProvided)
 	})
 
 	t.Run("properly reports cluster state", func(t *testing.T) {
 		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
 
-		dynClient := dyn_fake.NewSimpleDynamicClientWithCustomListKinds(scheme.Scheme,
-			map[schema.GroupVersionResource]string{
-				{
-					Group:    "gateway.networking.k8s.io",
-					Version:  "v1beta1",
-					Resource: "gateways",
-				}: "GatewayList",
-			},
+		objs := []k8sruntime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -140,9 +135,21 @@ func TestWorkflowClusterState(t *testing.T) {
 					Name: "worker-node-1",
 				},
 			},
+		}
+
+		cl := ctrlclient_fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
+		dynClient := dyn_fake.NewSimpleDynamicClientWithCustomListKinds(scheme.Scheme,
+			map[schema.GroupVersionResource]string{
+				{
+					Group:    "gateway.networking.k8s.io",
+					Version:  "v1beta1",
+					Resource: "gateways",
+				}: "GatewayList",
+			},
+			objs...,
 		)
 
-		w, err := NewClusterStateWorkflow(dynClient)
+		w, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
 		require.NoError(t, err)
 		require.NotNil(t, w)
 
@@ -153,9 +160,11 @@ func TestWorkflowClusterState(t *testing.T) {
 			provider.NodeCountKey:    2,
 			provider.PodCountKey:     1,
 			provider.ServiceCountKey: 2,
-			// TODO fix below count: it should be 1 but for some reason even after adding the GVR
-			// to scheme gateways can't be found by listing.
-			provider.GatewayCountKey: 0,
+			// TODO: Even though we added Gateway API's schema to schema.Scheme, gateway count provider
+			// doesn't detect it properly due to:
+			// https://github.com/kubernetes/kubernetes/pull/110053.
+			// When that's addressed we should revisit this test.
+			// provider.GatewayCountKey: 0,
 		}, r)
 	})
 }

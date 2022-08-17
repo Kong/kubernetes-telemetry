@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 )
@@ -16,23 +17,11 @@ const (
 // NewK8sGatewayCountProvider creates telemetry data provider that will query the
 // configured k8s cluster - using the provided client - to get a gateway count from
 // the cluster.
-func NewK8sGatewayCountProvider(name string, d dynamic.Interface) (Provider, error) {
-	gvk := schema.GroupVersionResource{
+func NewK8sGatewayCountProvider(name string, d dynamic.Interface, rm meta.RESTMapper) (Provider, error) {
+	gvr := schema.GroupVersionResource{
 		Group:    "gateway.networking.k8s.io",
 		Version:  "v1beta1",
 		Resource: "gateways",
 	}
-
-	// TODO:
-	// consider detecting what resource version is available on the cluster to
-	// properly report. Alternatively consider reporting version together with
-	// the count.
-	return &k8sObjectCount{
-		resource: d.Resource(gvk),
-		gvk:      gvk,
-		base: base{
-			name: name,
-			kind: GatewayCountKind,
-		},
-	}, nil
+	return NewK8sObjectCountProviderWithRESTMapper(name, GatewayCountKind, d, gvr, rm)
 }
