@@ -17,18 +17,11 @@ const (
 // configured k8s cluster - using the provided client - to get a service count from
 // the cluster.
 func NewK8sServiceCountProvider(name string, d dynamic.Interface) (Provider, error) {
-	gvk := schema.GroupVersionResource{
+	gvr := schema.GroupVersionResource{
 		Group:    "",
 		Version:  "v1",
 		Resource: "services",
 	}
 
-	return &k8sObjectCount{
-		resource: d.Resource(gvk),
-		gvk:      gvk,
-		base: base{
-			name: name,
-			kind: ServiceCountKind,
-		},
-	}, nil
+	return NewK8sObjectCountProvider(name, ServiceCountKind, d, gvr)
 }

@@ -14,10 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dyn_fake "k8s.io/client-go/dynamic/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
@@ -159,14 +161,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 	t.Run("identify platform and cluster state", func(t *testing.T) {
 		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
 
-		dynClient := dyn_fake.NewSimpleDynamicClientWithCustomListKinds(scheme.Scheme,
-			map[schema.GroupVersionResource]string{
-				{
-					Group:    "gateway.networking.k8s.io",
-					Version:  "v1beta1",
-					Resource: "gateways",
-				}: "GatewayList",
-			},
+		objs := []k8sruntime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -218,8 +213,23 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 					Name: "worker-node-1",
 				},
 			},
+		}
+
+		cl := ctrlclient_fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
+
+		dynClient := dyn_fake.NewSimpleDynamicClientWithCustomListKinds(
+			scheme.Scheme,
+			map[schema.GroupVersionResource]string{
+				{
+					Group:    "gateway.networking.k8s.io",
+					Version:  "v1beta1",
+					Resource: "gateways",
+				}: "GatewayList",
+			},
+			objs...,
 		)
-		clusterStateWorkflow, err := NewClusterStateWorkflow(dynClient)
+
+		clusterStateWorkflow, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
 		require.NoError(t, err)
 		require.NotNil(t, clusterStateWorkflow)
 
@@ -249,9 +259,11 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 				"k8s_nodes_count":    1,
 				"k8s_pods_count":     1,
 				"k8s_services_count": 2,
-				// TODO fix below count: it should be 1 but for some reason even after adding the GVR
-				// to scheme gateways can't be found by listing.
-				"k8s_gateways_count": 0,
+				// TODO: Even though we added Gateway API's schema to schema.Scheme, gateway count provider
+				// doesn't detect it properly due to:
+				// https://github.com/kubernetes/kubernetes/pull/110053.
+				// When that's addressed we should revisit this test.
+				// "k8s_gateways_count": 0,
 			},
 			"identify-platform": provider.Report{
 				"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),

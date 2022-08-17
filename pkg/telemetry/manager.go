@@ -104,6 +104,9 @@ func NewManager(opts ...OptManager) (Manager, error) {
 
 // AddWorkflow adds a workflow to manager's workflows.
 func (m *manager) AddWorkflow(w Workflow) {
+	if w == nil {
+		return
+	}
 	m.workflows.Store(w.Name(), w)
 }
 
@@ -158,14 +161,13 @@ func (m *manager) workflowsLoop() {
 	defer ticker.Stop()
 
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), m.period)
-
 		select {
 		case <-m.done:
-			cancel()
-			return
+			break
 
 		case <-ticker.C:
+			ctx, cancel := context.WithTimeout(context.Background(), m.period)
+
 			report, err := m.Execute(ctx)
 			if err != nil {
 				m.logger.V(log.DebugLevel).
@@ -199,15 +201,15 @@ func (m *manager) Execute(ctx context.Context) (types.Report, error) {
 		report = types.Report{}
 	)
 
-	m.workflows.Range(func(name string, v Workflow) bool {
-		r, err := v.Execute(ctx)
+	m.workflows.Range(func(name string, w Workflow) bool {
+		r, err := w.Execute(ctx)
 		if err != nil {
 			mErr = multierror.Append(mErr, err)
 		}
 
 		// Add the report regardless if it's partial only omitting empty (nil) reports.
 		if r != nil {
-			report[v.Name()] = r
+			report[w.Name()] = r
 		}
 
 		return true

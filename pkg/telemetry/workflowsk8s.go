@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
@@ -59,6 +60,8 @@ const (
 
 // NewClusterStateWorkflow creates a new 'cluster-state' workflow, based on a predefined
 // set of providers that will deliver telemetry data about the cluster state.
+// When a non-builtin CRD (like Gateway from Gateway API) is not available then
+// the provider for this resource's telemetry data is not added to the workflow.
 //
 // Exemplar report produced:
 //
@@ -68,33 +71,42 @@ const (
 //	  "k8s_gateways_count": 1,
 //	  "k8s_nodes_count": 1
 //	}
-func NewClusterStateWorkflow(d dynamic.Interface) (Workflow, error) {
+func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow, error) {
 	if d == nil {
 		return nil, ErrNilDynClientProvided
 	}
+
+	w := NewWorkflow(ClusterStateWorkflowName)
 
 	providerPodCount, err := provider.NewK8sPodCountProvider(string(provider.PodCountKey), d)
 	if err != nil {
 		return nil, err
 	}
+	w.AddProvider(providerPodCount)
+
 	providerServiceCount, err := provider.NewK8sServiceCountProvider(string(provider.ServiceCountKey), d)
 	if err != nil {
 		return nil, err
 	}
-	providerGatewayCount, err := provider.NewK8sGatewayCountProvider(string(provider.GatewayCountKey), d)
-	if err != nil {
-		return nil, err
-	}
+	w.AddProvider(providerServiceCount)
+
 	providerNodeCount, err := provider.NewK8sNodeCountProvider(string(provider.NodeCountKey), d)
 	if err != nil {
 		return nil, err
 	}
-
-	w := NewWorkflow(ClusterStateWorkflowName)
-	w.AddProvider(providerPodCount)
-	w.AddProvider(providerServiceCount)
-	w.AddProvider(providerGatewayCount)
 	w.AddProvider(providerNodeCount)
+
+	// Below listed count providers are added optionally, when the corresponding CRDs are present
+	// in the cluster.
+	providerGatewayCount, err := provider.NewK8sGatewayCountProvider(string(provider.GatewayCountKey), d, rm)
+	if err != nil {
+		if !meta.IsNoMatchError(err) {
+			return nil, err
+		}
+		// If there's no kind for Gateway in the cluster then just don't add its count provider.
+	} else {
+		w.AddProvider(providerGatewayCount)
+	}
 
 	return w, nil
 }
