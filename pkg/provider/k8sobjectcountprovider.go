@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 )
@@ -30,7 +30,7 @@ func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
 	)
 
 	for {
-		list, err := k.resource.List(ctx, v1.ListOptions{
+		list, err := k.resource.List(ctx, metav1.ListOptions{
 			// Conservatively use a limit for paging.
 			Limit:    defaultPageLimit,
 			Continue: continueToken,
