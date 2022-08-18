@@ -10,15 +10,12 @@ require (
 	github.com/puzpuzpuz/xsync v1.4.3
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
-	k8s.io/apimachinery v0.24.3
+	k8s.io/apimachinery v0.24.4
 	k8s.io/client-go v0.24.3
 	sigs.k8s.io/controller-runtime v0.12.3
 )
 
-require (
-	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-)
+require github.com/hashicorp/errwrap v1.0.0 // indirect
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
