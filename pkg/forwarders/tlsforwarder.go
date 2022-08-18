@@ -49,10 +49,12 @@ func NewTLSForwarder(address string, logger logr.Logger) *tlsForwarder {
 	}
 }
 
+// Name returns the name of the forwarder.
 func (tf *tlsForwarder) Name() string {
 	return "TLSForwarder"
 }
 
+// Forward forwards the received payload to the configured TLS endpoint.
 func (tf *tlsForwarder) Forward(ctx context.Context, payload []byte) error {
 	var deadline time.Time
 	if d, ok := ctx.Deadline(); ok {

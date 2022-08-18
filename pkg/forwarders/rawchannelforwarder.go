@@ -7,21 +7,23 @@ import (
 )
 
 type rawChannelForwarder struct {
-	ch chan types.Report
+	ch chan types.SignalReport
 }
 
 // NewRawChannelForwarder creates new rawChannelForwarder.
-func NewRawChannelForwarder(ch chan types.Report) *rawChannelForwarder {
+func NewRawChannelForwarder(ch chan types.SignalReport) *rawChannelForwarder {
 	return &rawChannelForwarder{
 		ch: ch,
 	}
 }
 
+// Name returns the name of the forwarder.
 func (f *rawChannelForwarder) Name() string {
-	return "LogForwarder"
+	return "rawChannelForwarder"
 }
 
-func (f *rawChannelForwarder) Forward(ctx context.Context, r types.Report) error {
+// Forward forwards the received report on the configured channel.
+func (f *rawChannelForwarder) Forward(ctx context.Context, r types.SignalReport) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

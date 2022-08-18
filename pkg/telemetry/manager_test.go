@@ -29,7 +29,7 @@ import (
 )
 
 func TestManagerStartStopDoesntFail(t *testing.T) {
-	m, err := NewManager(OptManagerLogger(logr.Discard()))
+	m, err := NewManager("dummy-signal", OptManagerLogger(logr.Discard()))
 	require.NoError(t, err)
 	require.NoError(t, m.Start())
 	m.Stop()
@@ -37,6 +37,7 @@ func TestManagerStartStopDoesntFail(t *testing.T) {
 
 func TestManagerBasicLogicWorks(t *testing.T) {
 	m, err := NewManager(
+		"dummy-signal",
 		OptManagerLogger(logr.Discard()),
 		OptManagerPeriod(time.Millisecond),
 	)
@@ -62,7 +63,7 @@ func TestManagerBasicLogicWorks(t *testing.T) {
 		m.AddWorkflow(w)
 	}
 
-	consumer := NewConsumer(serializers.NewSemicolonDelimited("ping"), forwarders.NewDiscardForwarder())
+	consumer := NewConsumer(serializers.NewSemicolonDelimited(), forwarders.NewDiscardForwarder())
 
 	require.NoError(t, m.AddConsumer(consumer))
 	require.NoError(t, m.Start())
@@ -76,16 +77,22 @@ func TestManagerBasicLogicWorks(t *testing.T) {
 
 	report := <-consumer.ch
 	m.Stop()
-	require.EqualValues(t, types.Report{
-		"basic1": provider.Report{
-			"constant1": "value1",
-			"constant2": "value2",
-		},
-	}, report)
+	require.EqualValues(t,
+		types.SignalReport{
+			Report: types.Report{
+				"basic1": provider.Report{
+					"constant1": "value1",
+					"constant2": "value2",
+				},
+			},
+			Signal: "dummy-signal",
+		}, report,
+	)
 }
 
 func TestManagerWithMultilpleWorkflows(t *testing.T) {
 	m, err := NewManager(
+		"dummy-signal",
 		OptManagerLogger(logr.Discard()),
 		OptManagerPeriod(time.Millisecond),
 	)
@@ -130,7 +137,7 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 		m.AddWorkflow(w)
 	}
 
-	consumer := NewConsumer(serializers.NewSemicolonDelimited("ping"), forwarders.NewDiscardForwarder())
+	consumer := NewConsumer(serializers.NewSemicolonDelimited(), forwarders.NewDiscardForwarder())
 	require.NoError(t, m.AddConsumer(consumer))
 
 	require.NoError(t, m.Start())
@@ -145,16 +152,22 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 	ch := consumer.ch
 	report := <-ch
 	m.Stop()
-	require.EqualValues(t, types.Report{
-		"basic1": provider.Report{
-			"constant1": "value1",
-			"constant2": "value2",
+	require.EqualValues(t,
+		types.SignalReport{
+			Report: types.Report{
+				"basic1": provider.Report{
+					"constant1": "value1",
+					"constant2": "value2",
+				},
+				"basic2": provider.Report{
+					"constant1": "value1",
+					"constant2": "value2",
+				},
+			},
+			Signal: "dummy-signal",
 		},
-		"basic2": provider.Report{
-			"constant1": "value1",
-			"constant2": "value2",
-		},
-	}, report)
+		report,
+	)
 }
 
 func TestManagerWithCatalogWorkflows(t *testing.T) {
@@ -239,6 +252,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 		require.NotNil(t, identifyPlatformWorkflow)
 
 		m, err := NewManager(
+			"dummy-signal",
 			OptManagerLogger(logr.Discard()),
 			OptManagerPeriod(time.Millisecond),
 		)
@@ -247,31 +261,129 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 		m.AddWorkflow(clusterStateWorkflow)
 		m.AddWorkflow(identifyPlatformWorkflow)
 
-		consumer := NewConsumer(serializers.NewSemicolonDelimited("ping"), forwarders.NewDiscardForwarder())
+		consumer := NewConsumer(serializers.NewSemicolonDelimited(), forwarders.NewDiscardForwarder())
 		require.NoError(t, m.AddConsumer(consumer))
 		require.NoError(t, m.Start())
 
 		report := <-consumer.ch
 		m.Stop()
 
-		require.EqualValues(t, types.Report{
-			"cluster-state": provider.Report{
-				"k8s_nodes_count":    1,
-				"k8s_pods_count":     1,
-				"k8s_services_count": 2,
-				// TODO: Even though we added Gateway API's schema to schema.Scheme, gateway count provider
-				// doesn't detect it properly due to:
-				// https://github.com/kubernetes/kubernetes/pull/110053.
-				// When that's addressed we should revisit this test.
-				// "k8s_gateways_count": 0,
+		require.EqualValues(t,
+			types.SignalReport{
+				Report: types.Report{
+					"cluster-state": provider.Report{
+						"k8s_nodes_count":    1,
+						"k8s_pods_count":     1,
+						"k8s_services_count": 2,
+						// TODO: Even though we added Gateway API's schema to schema.Scheme, gateway count provider
+						// doesn't detect it properly due to:
+						// https://github.com/kubernetes/kubernetes/pull/110053.
+						// When that's addressed we should revisit this test.
+						// "k8s_gateways_count": 0,
+					},
+					"identify-platform": provider.Report{
+						"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+						"k8sv":         "v0.0.0-master+$Format:%H$",
+						"k8sv_semver":  "v0.0.0",
+						"k8s_provider": provider.ClusterProviderUnknown,
+					},
+				},
+				Signal: "dummy-signal",
 			},
-			"identify-platform": provider.Report{
-				"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-				"k8sv":         "v0.0.0-master+$Format:%H$",
-				"k8sv_semver":  "v0.0.0",
-				"k8s_provider": provider.ClusterProviderUnknown,
+			report,
+		)
+	})
+}
+
+func TestManagerTriggerExecute(t *testing.T) {
+	t.Run("TriggerExecute successfully triggers an execution", func(t *testing.T) {
+		objs := []k8sruntime.Object{
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "kong-ingress-controller",
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "ingress-controller",
+							Image: "kong/kubernetes-ingress-controller:2.4",
+						},
+					},
+				},
 			},
-		}, report)
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "namespace1",
+					Name:      "srv",
+				},
+			},
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "namespace2",
+					Name:      "srv",
+				},
+			},
+			&corev1.Node{
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///eu-west-1b/i-0fa11111111111111",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"kubeadm.alpha.kubernetes.io/cri-socket":                 "unix:///run/containerd/containerd.sock",
+						"node.alpha.kubernetes.io/ttl":                           "0",
+						"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+					},
+					Labels: map[string]string{
+						"beta.kubernetes.io/arch":                                 "arm64",
+						"beta.kubernetes.io/os":                                   "linux",
+						"kubernetes.io/arch":                                      "arm64",
+						"kubernetes.io/hostname":                                  "worker-node-1",
+						"kubernetes.io/os":                                        "linux",
+						"node-role.kubernetes.io/control-plane":                   "",
+						"node.kubernetes.io/exclude-from-external-load-balancers": "",
+					},
+					Name: "worker-node-1",
+				},
+			},
+		}
+
+		cl := ctrlclient_fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
+		dynClient := dyn_fake.NewSimpleDynamicClient(scheme.Scheme, objs...)
+
+		clusterStateWorkflow, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
+		require.NoError(t, err)
+		require.NotNil(t, clusterStateWorkflow)
+
+		kc := clientgo_fake.NewSimpleClientset(objs...)
+		identifyPlatformWorkflow, err := NewIdentifyPlatformWorkflow(kc)
+		require.NoError(t, err)
+		require.NotNil(t, identifyPlatformWorkflow)
+
+		m, err := NewManager(
+			"dummy-signal",
+			OptManagerLogger(logr.Discard()),
+			OptManagerPeriod(time.Hour),
+		)
+		require.NoError(t, err)
+
+		m.AddWorkflow(clusterStateWorkflow)
+		m.AddWorkflow(identifyPlatformWorkflow)
+
+		ch := make(chan []byte)
+		consumer := NewConsumer(serializers.NewSemicolonDelimited(), forwarders.NewChannelForwarder(ch))
+		require.NoError(t, m.AddConsumer(consumer))
+		require.NoError(t, m.Start())
+		require.NoError(t, m.TriggerExecute(context.Background(), "ping"))
+
+		report := <-ch
+		m.Stop()
+
+		arch := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
+		require.EqualValues(t,
+			fmt.Sprintf("<14>signal=ping;k8s_arch=%s;k8s_provider=AWS;k8sv=v0.0.0-master+$Format:%%H$;k8sv_semver=v0.0.0;k8s_nodes_count=1;k8s_pods_count=1;k8s_services_count=2;\n", arch),
+			string(report),
+		)
 	})
 }
 
@@ -280,6 +392,7 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 	logrusLog.Level = logrus.DebugLevel
 	log := logrusr.New(logrusLog)
 	m, err := NewManager(
+		"dummy-signal",
 		OptManagerLogger(log),
 		OptManagerPeriod(time.Millisecond),
 	)
@@ -320,19 +433,25 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 		m.AddWorkflow(w)
 	}
 
-	ch := make(chan types.Report)
+	ch := make(chan types.SignalReport)
 	consumer := NewRawConsumer(forwarders.NewRawChannelForwarder(ch))
 	require.NoError(t, m.AddConsumer(consumer))
 	require.NoError(t, m.Start())
 
 	report := <-ch
 	m.Stop()
-	require.EqualValues(t, types.Report{
-		"basic": provider.Report{
-			"constant1": "value1",
+	require.EqualValues(t,
+		types.SignalReport{
+			Report: types.Report{
+				"basic": provider.Report{
+					"constant1": "value1",
+				},
+				"basic_with_error": provider.Report{
+					"constant2": "value2",
+				},
+			},
+			Signal: "dummy-signal",
 		},
-		"basic_with_error": provider.Report{
-			"constant2": "value2",
-		},
-	}, report)
+		report,
+	)
 }
