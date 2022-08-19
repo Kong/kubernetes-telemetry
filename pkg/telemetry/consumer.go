@@ -12,7 +12,7 @@ import (
 type consumer struct {
 	logger logr.Logger
 	once   sync.Once
-	ch     chan types.Report
+	ch     chan types.SignalReport
 	cancel func()
 }
 
@@ -26,7 +26,7 @@ type Forwarder interface {
 // serialize the data and then forward it using the provided forwarder.
 func NewConsumer(s Serializer, f Forwarder) *consumer {
 	var (
-		ch          = make(chan types.Report)
+		ch          = make(chan types.SignalReport)
 		ctx, cancel = context.WithCancel(context.Background())
 		// TODO: allow configuration: https://github.com/Kong/kubernetes-telemetry/issues/46
 		logger = defaultLogger()
@@ -39,8 +39,8 @@ func NewConsumer(s Serializer, f Forwarder) *consumer {
 			select {
 			case <-done:
 				return
-			case r := <-ch:
-				b, err := s.Serialize(r)
+			case sr := <-ch:
+				b, err := s.Serialize(sr.Report, sr.Signal)
 				if err != nil {
 					logger.Error(err, "failed to serialize report")
 					continue
@@ -61,7 +61,7 @@ func NewConsumer(s Serializer, f Forwarder) *consumer {
 }
 
 // Intake returns a channel on which this consumer will wait for data to consume it.
-func (c *consumer) Intake() chan<- types.Report {
+func (c *consumer) Intake() chan<- types.SignalReport {
 	return c.ch
 }
 
@@ -75,7 +75,7 @@ func (c *consumer) Close() {
 type rawConsumer struct {
 	logger logr.Logger
 	once   sync.Once
-	ch     chan types.Report
+	ch     chan types.SignalReport
 	cancel func()
 }
 
@@ -83,14 +83,14 @@ type rawConsumer struct {
 // destination(s).
 type RawForwarder interface {
 	Name() string
-	Forward(context.Context, types.Report) error
+	Forward(context.Context, types.SignalReport) error
 }
 
 // NewRawConsumer creates a new rawconsumer that will use the provided raw forwarder
 // to forward received reports.
 func NewRawConsumer(f RawForwarder) *rawConsumer {
 	var (
-		ch          = make(chan types.Report)
+		ch          = make(chan types.SignalReport)
 		ctx, cancel = context.WithCancel(context.Background())
 		// TODO: allow configuration: https://github.com/Kong/kubernetes-telemetry/issues/46
 		logger = defaultLogger()
@@ -103,8 +103,8 @@ func NewRawConsumer(f RawForwarder) *rawConsumer {
 			select {
 			case <-done:
 				return
-			case r := <-ch:
-				if err := f.Forward(ctx, r); err != nil {
+			case sr := <-ch:
+				if err := f.Forward(ctx, sr); err != nil {
 					logger.Error(err, "failed to forward report using raw forwarder: %s", f.Name())
 				}
 			}
@@ -119,7 +119,7 @@ func NewRawConsumer(f RawForwarder) *rawConsumer {
 }
 
 // Intake returns a channel on which this consumer will wait for data to consume it.
-func (c *rawConsumer) Intake() chan<- types.Report {
+func (c *rawConsumer) Intake() chan<- types.SignalReport {
 	return c.ch
 }
 

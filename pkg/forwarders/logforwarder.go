@@ -18,10 +18,12 @@ func NewLogForwarder(log logr.Logger) *logForwarder {
 	}
 }
 
+// Name returns the name of the forwarder.
 func (lf *logForwarder) Name() string {
 	return "LogForwarder"
 }
 
+// Forward logs the received payload.
 func (lf *logForwarder) Forward(ctx context.Context, payload []byte) error {
 	lf.log.Info("got a report", "report", payload)
 	return nil

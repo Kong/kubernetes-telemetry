@@ -60,6 +60,11 @@ linters-settings:
         alias: metav1
       - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
         alias: gateway${1}
+  revive:
+    severity: error
+    rules:
+      - name: exported
+        disabled: false
 issues:
   fix: true
   # Independently of option `exclude` we use default exclude patterns,

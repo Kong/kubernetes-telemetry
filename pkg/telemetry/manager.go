@@ -28,6 +28,8 @@ const (
 	// ErrCantAddConsumersAfterStart occurs when consumers are tried to be added
 	// after the manager has been already started.
 	ErrCantAddConsumersAfterStart = managerErr("can't add consumers after start")
+	// ErrManagerAlreadyStopped occurs when manager has already been stopped.
+	ErrManagerAlreadyStopped = managerErr("manager stopped")
 )
 
 const (
@@ -37,6 +39,9 @@ const (
 )
 
 type manager struct {
+	// signal is the signal that this manager will send out periodically unless
+	// overridden via TriggerExecute's parameter.
+	signal types.Signal
 	// workflows contains a map of workflows identified by their names
 	workflows *xsync.MapOf[Workflow]
 	// period defines at what cadence the workflows will be triggered.
@@ -46,13 +51,14 @@ type manager struct {
 
 	// consumers is a slice of channels that will consume reports produced by
 	// execution of workflows.
-	consumers []chan<- types.Report
+	consumers []chan<- types.SignalReport
 
-	ch      chan types.Report
-	once    sync.Once
-	logger  logr.Logger
-	done    chan struct{}
-	started int32
+	chTrigger chan types.Signal
+	ch        chan types.SignalReport
+	once      sync.Once
+	logger    logr.Logger
+	done      chan struct{}
+	started   int32
 }
 
 var _ Manager = (*manager)(nil)
@@ -77,18 +83,26 @@ type Manager interface {
 	AddConsumer(c Consumer) error
 	// AddWorkflow adds a workflow with providers which will provide telemetry data.
 	AddWorkflow(Workflow)
-	// Execute executes all workflows and returns an aggregated report from those
+	// TriggerExecute triggers an execution of all configured workflows, which will gather
+	// all telemetry data, push it downstream to configured serializers and then
+	// forward it using the configured forwarders.
+	// It will use the provided signal name overriding what's configured in the
+	// Manager.
+	TriggerExecute(context.Context, types.Signal) error
+	// Report executes all workflows and returns an aggregated report from those
 	// workflows.
-	Execute(context.Context) (types.Report, error)
+	Report(context.Context) (types.Report, error)
 }
 
 // NewManager creates a new manager configured via the provided options.
-func NewManager(opts ...OptManager) (Manager, error) {
+func NewManager(signal types.Signal, opts ...OptManager) (Manager, error) {
 	m := &manager{
+		signal:    signal,
 		workflows: xsync.NewMapOf[Workflow](),
 		period:    DefaultWorkflowTickPeriod,
-		consumers: []chan<- types.Report{},
-		ch:        make(chan types.Report),
+		consumers: []chan<- types.SignalReport{},
+		chTrigger: make(chan types.Signal),
+		ch:        make(chan types.SignalReport),
 		logger:    defaultLogger(),
 		done:      make(chan struct{}),
 	}
@@ -134,7 +148,7 @@ func (m *manager) Stop() {
 // Consumer is an entity that can consume telemetry reports on a channel returned
 // by Intake().
 type Consumer interface {
-	Intake() chan<- types.Report
+	Intake() chan<- types.SignalReport
 	Close()
 }
 
@@ -148,6 +162,17 @@ func (m *manager) AddConsumer(c Consumer) error {
 	return nil
 }
 
+func (m *manager) TriggerExecute(ctx context.Context, signal types.Signal) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case m.chTrigger <- signal:
+		return nil
+	case <-m.done:
+		return ErrManagerAlreadyStopped
+	}
+}
+
 // workflowsLoop defines a mechanism which periodically loops over all configured
 // workflows, executes them to get the telemetry data from provided telemetry
 // providers and then sends that telemetry over to consumers.
@@ -157,18 +182,31 @@ func (m *manager) AddConsumer(c Consumer) error {
 // If there's enough demand in the future this can be done in a way such that each
 // workflow has it's own independent period (and hence an independent timelime).
 func (m *manager) workflowsLoop() {
-	ticker := time.NewTicker(m.period)
-	defer ticker.Stop()
+	ch := make(chan types.Signal)
+	go func() {
+		ticker := time.NewTicker(m.period)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-m.done:
+				return
+			case <-ticker.C:
+				ch <- m.signal
+			case signal := <-m.chTrigger:
+				ch <- signal
+			}
+		}
+	}()
 
 	for {
 		select {
 		case <-m.done:
 			break
 
-		case <-ticker.C:
+		case signal := <-ch:
 			ctx, cancel := context.WithTimeout(context.Background(), m.period)
 
-			report, err := m.Execute(ctx)
+			report, err := m.Report(ctx)
 			if err != nil {
 				m.logger.V(log.DebugLevel).
 					WithValues("error", err.Error()).
@@ -183,7 +221,10 @@ func (m *manager) workflowsLoop() {
 			}
 
 			select {
-			case m.ch <- report:
+			case m.ch <- types.SignalReport{
+				Signal: signal,
+				Report: report,
+			}:
 			case <-m.done:
 				cancel()
 				break
@@ -195,7 +236,7 @@ func (m *manager) workflowsLoop() {
 
 // Execute executes all configures workflows and returns an aggregated report
 // from all the underlying providers.
-func (m *manager) Execute(ctx context.Context) (types.Report, error) {
+func (m *manager) Report(ctx context.Context) (types.Report, error) {
 	var (
 		mErr   error
 		report = types.Report{}

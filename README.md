@@ -5,6 +5,63 @@ Toolkit for telemetry data for [Kong's][kong] Kubernetes products, such as the
 
 ## Usage
 
+```go
+import (
+  "context"
+  "time"
+
+  "github.com/bombsimon/logrusr/v3"
+  "github.com/sirupsen/logrus"
+  "k8s.io/client-go/kubernetes"
+  "k8s.io/client-go/rest"
+  "k8s.io/client-go/tools/clientcmd"
+
+  "github.com/kong/kubernetes-telemetry/pkg/forwarders"
+  "github.com/kong/kubernetes-telemetry/pkg/serializers"
+  "github.com/kong/kubernetes-telemetry/pkg/telemetry"
+)
+
+func main() {
+  log := logrusr.New(logrus.New())
+  m, err := telemetry.NewManager(
+    "custom-ping",
+    telemetry.OptManagerPeriod(time.Hour),
+    telemetry.OptManagerLogger(log),
+  )
+  // Handle errors ...
+
+  // Configure your Kubernetes client(s)
+  loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+  // If you want to change the loading rules (which files in which order), you can do so here
+  kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, nil)
+  restConfig, err := kubeConfig.ClientConfig()
+  // Handle errors ...
+  cl, err := kubernetes.NewForConfig(restConfig)
+  // Handle errors ...
+
+  w, err := telemetry.NewIdentifyPlatformWorkflow(cl)
+  // Handle errors ...
+  m.AddWorkflow(w)
+
+  // Add more workflows/providers if needed ...
+  
+  // Configure serialization ...
+  serializer := serializers.NewSemicolonDelimited()
+  // ... and forwarding
+  tf := forwarders.NewTLSForwarder(splunkEndpoint, log)
+  consumer := telemetry.NewConsumer(serializer, tf)
+  m.AddConsumer(consumer)
+
+  // Start the manager
+  err := m.Start()
+  // Handle errors ...
+
+
+  // Trigger asynchronous report as needed.
+  err := m.TriggerExecute(context.Background(), "custom-event-happened");
+  // Handle errors ...
+```
+
 ### Forwarders
 
 Forwarders can be used to forward serialized telemetry reports to a particular destination.

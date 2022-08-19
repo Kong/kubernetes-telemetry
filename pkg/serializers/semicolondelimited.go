@@ -9,26 +9,22 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
-type semicolonDelimited struct {
-	signal string
-}
+type semicolonDelimited struct{}
 
 // NewSemicolonDelimited creates a new serializer that will serialize telemetry
 // reports into a semicolon delimited format.
-func NewSemicolonDelimited(signal string) semicolonDelimited {
-	return semicolonDelimited{
-		signal: signal,
-	}
+func NewSemicolonDelimited() semicolonDelimited {
+	return semicolonDelimited{}
 }
 
-func (s semicolonDelimited) Serialize(report types.Report) ([]byte, error) {
+func (s semicolonDelimited) Serialize(report types.Report, signal types.Signal) ([]byte, error) {
 	out := make([]string, 0, len(report))
 	for _, v := range report {
 		out = append(out, serializeReport(v))
 	}
 
 	// Should this prefix go to TLSForwarder instead?
-	prefix := "<14>signal=" + s.signal + ";"
+	prefix := fmt.Sprintf("<14>signal=%s;", signal)
 
 	sort.Strings(out)
 	return []byte(prefix + strings.Join(out, "") + "\n"), nil
