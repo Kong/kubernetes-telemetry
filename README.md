@@ -48,7 +48,8 @@ func main() {
   // Configure serialization ...
   serializer := serializers.NewSemicolonDelimited()
   // ... and forwarding
-  tf := forwarders.NewTLSForwarder(splunkEndpoint, log)
+  tf, err := forwarders.NewTLSForwarder(splunkEndpoint, log)
+  // Handle errors ...
   consumer := telemetry.NewConsumer(serializer, tf)
   m.AddConsumer(consumer)
 

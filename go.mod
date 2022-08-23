@@ -15,7 +15,10 @@ require (
 	sigs.k8s.io/controller-runtime v0.12.3
 )
 
-require github.com/hashicorp/errwrap v1.0.0 // indirect
+require (
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

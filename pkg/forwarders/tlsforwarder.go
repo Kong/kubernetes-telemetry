@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
-	"github.com/kong/kubernetes-telemetry/pkg/log"
 )
 
 const (
@@ -17,7 +15,7 @@ const (
 	defaultDeadline = time.Minute
 )
 
-var tlsConf = tls.Config{
+var defaultTLSConf = tls.Config{
 	MinVersion: tls.VersionTLS13,
 	MaxVersion: tls.VersionTLS13,
 }
@@ -27,26 +25,33 @@ type tlsForwarder struct {
 	conn   *tls.Conn
 }
 
+// TLSOpt defines an option type that manipulates *tls.Config.
+type TLSOpt func(*tls.Config)
+
 // NewTLSForwarder creates a TLS forwarder which forwards received serialized reports
 // to a TLS endpoint specified by the provided address.
-func NewTLSForwarder(address string, logger logr.Logger) *tlsForwarder {
+func NewTLSForwarder(address string, logger logr.Logger, tlsOpts ...TLSOpt) (*tlsForwarder, error) {
+	tlsConf := defaultTLSConf.Clone()
+	for _, opt := range tlsOpts {
+		opt(tlsConf)
+	}
+
 	conn, err := tls.DialWithDialer(
 		&net.Dialer{
 			Timeout: defaultTimeout,
 		},
 		"tcp",
 		address,
-		&tlsConf,
+		tlsConf,
 	)
 	if err != nil {
-		logger.V(log.DebugLevel).Info("failed to connect to reporting server", "error", err)
-		return nil
+		return nil, fmt.Errorf("failed to connect to reporting server: %w", err)
 	}
 
 	return &tlsForwarder{
 		logger: logger,
 		conn:   conn,
-	}
+	}, nil
 }
 
 // Name returns the name of the forwarder.
