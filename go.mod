@@ -12,10 +12,13 @@ require (
 	github.com/stretchr/testify v1.8.0
 	k8s.io/apimachinery v0.25.0
 	k8s.io/client-go v0.25.0
-	sigs.k8s.io/controller-runtime v0.12.3
+	sigs.k8s.io/controller-runtime v0.13.0
 )
 
-require github.com/hashicorp/errwrap v1.0.0 // indirect
+require (
+	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
