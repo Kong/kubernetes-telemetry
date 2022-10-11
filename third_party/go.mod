@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/golangci/golangci-lint v1.50.0
-	github.com/haveyoudebuggedit/gotestfmt/v2 v2.3.2
+	github.com/haveyoudebuggedit/gotestfmt/v2 v2.4.0
 )
 
 require (
