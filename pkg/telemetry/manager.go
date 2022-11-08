@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
-	"github.com/puzpuzpuz/xsync"
+	"github.com/puzpuzpuz/xsync/v2"
 
 	"github.com/kong/kubernetes-telemetry/pkg/log"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
@@ -43,7 +43,7 @@ type manager struct {
 	// overridden via TriggerExecute's parameter.
 	signal types.Signal
 	// workflows contains a map of workflows identified by their names
-	workflows *xsync.MapOf[Workflow]
+	workflows *xsync.MapOf[string, Workflow]
 	// period defines at what cadence the workflows will be triggered.
 	// For now, all workflows work on the same cadence, i.e. are triggered at the
 	// same given, ruled by one timer.
