@@ -10,7 +10,7 @@ require (
 	github.com/puzpuzpuz/xsync/v2 v2.3.2
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1
-	k8s.io/apimachinery v0.25.3
+	k8s.io/apimachinery v0.25.4
 	k8s.io/client-go v0.25.3
 	sigs.k8s.io/controller-runtime v0.13.1
 )
@@ -18,7 +18,6 @@ require (
 require (
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 )
 
 require (
