@@ -7,7 +7,7 @@ require (
 	github.com/gammazero/workerpool v1.1.3
 	github.com/go-logr/logr v1.2.3
 	github.com/pkg/errors v0.9.1
-	github.com/puzpuzpuz/xsync/v2 v2.3.2
+	github.com/puzpuzpuz/xsync/v2 v2.4.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1
 	k8s.io/apimachinery v0.25.4
