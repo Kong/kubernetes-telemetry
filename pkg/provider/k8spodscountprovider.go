@@ -3,12 +3,14 @@ package provider
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
 	// PodCountKey is report key under which the number of pods in the cluster
 	// will be provided.
-	PodCountKey = ReportKey("k8s_pods_count")
+	PodCountKey = types.ProviderReportKey("k8s_pods_count")
 	// PodCountKind represents the pod count provider kind.
 	PodCountKind = Kind(PodCountKey)
 )

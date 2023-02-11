@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 func TestTLSForwarder(t *testing.T) {
@@ -127,7 +128,7 @@ f3cb9gYaLWdmvkx8p3g=
 	require.NoError(t, err)
 
 	w := telemetry.NewWorkflow("test1")
-	p, err := provider.NewFixedValueProvider("test1-provider", provider.Report{
+	p, err := provider.NewFixedValueProvider("test1-provider", types.ProviderReport{
 		"key": "value",
 	})
 	require.NoError(t, err)

@@ -8,13 +8,15 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 func TestClusterVersion(t *testing.T) {
 	testcases := []struct {
 		name       string
 		clientFunc func() *clientgo_fake.Clientset
-		expected   Report
+		expected   types.ProviderReport
 	}{
 		{
 			name: "undecodable git version from /version API returns the major and minor version concatenated string",
@@ -37,7 +39,7 @@ func TestClusterVersion(t *testing.T) {
 
 				return kc
 			},
-			expected: Report{
+			expected: types.ProviderReport{
 				ClusterVersionKey:       "v1-custom",
 				ClusterVersionSemverKey: "v1.24",
 			},
@@ -64,7 +66,7 @@ func TestClusterVersion(t *testing.T) {
 
 				return kc
 			},
-			expected: Report{
+			expected: types.ProviderReport{
 				ClusterVersionKey:       "v1.24.1-gke.1400",
 				ClusterVersionSemverKey: "v1.24.1",
 			},
@@ -91,7 +93,7 @@ func TestClusterVersion(t *testing.T) {
 
 				return kc
 			},
-			expected: Report{
+			expected: types.ProviderReport{
 				ClusterVersionKey:       "v1.22.10-eks-84b4fe6",
 				ClusterVersionSemverKey: "v1.22.10",
 			},

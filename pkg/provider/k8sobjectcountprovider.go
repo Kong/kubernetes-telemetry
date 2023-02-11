@@ -7,6 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 // k8sObjectCount is a Provider that returns the count of all objects of a certain kind in the Kubernetes cluster.
@@ -55,7 +57,7 @@ const (
 	defaultPageLimit = 1000
 )
 
-func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
+func (k *k8sObjectCount) Provide(ctx context.Context) (types.ProviderReport, error) {
 	var (
 		count         int
 		continueToken string
@@ -68,7 +70,7 @@ func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
 			Continue: continueToken,
 		})
 		if err != nil {
-			return Report{}, k.WrapError(err)
+			return types.ProviderReport{}, k.WrapError(err)
 		}
 
 		count += len(list.Items)
@@ -77,8 +79,8 @@ func (k *k8sObjectCount) Provide(ctx context.Context) (Report, error) {
 		}
 	}
 
-	return Report{
-		ReportKey("k8s_" + k.gvr.Resource + "_count"): count,
+	return types.ProviderReport{
+		types.ProviderReportKey("k8s_" + k.gvr.Resource + "_count"): count,
 	}, nil
 }
 

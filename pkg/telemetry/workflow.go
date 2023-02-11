@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 // Workflow defines the workflow interface which will be used either for manual
@@ -20,7 +21,7 @@ type Workflow interface {
 	// AddProvider adds a provider.
 	AddProvider(provider.Provider)
 	// Execute executes the workflow.
-	Execute(context.Context) (provider.Report, error)
+	Execute(context.Context) (types.ProviderReport, error)
 }
 
 var _ Workflow = (*workflow)(nil)
@@ -54,12 +55,12 @@ func (w *workflow) AddProvider(p provider.Provider) {
 }
 
 // Execute executes the workflow by triggering all configured providers.
-func (w *workflow) Execute(ctx context.Context) (provider.Report, error) {
+func (w *workflow) Execute(ctx context.Context) (types.ProviderReport, error) {
 	var (
-		report   = provider.Report{}
+		report   = types.ProviderReport{}
 		chDone   = make(chan struct{})
 		chErr    = make(chan error)
-		chReport = make(chan provider.Report)
+		chReport = make(chan types.ProviderReport)
 		wp       = workerpool.New(w.concurrency)
 		wg       sync.WaitGroup
 	)

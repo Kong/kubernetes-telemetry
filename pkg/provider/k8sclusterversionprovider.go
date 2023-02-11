@@ -8,15 +8,17 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
 	// ClusterVersionKey is the report key under which cluster k8s version will
 	// be provided as returned by the /version API.
-	ClusterVersionKey = ReportKey("k8sv")
+	ClusterVersionKey = types.ProviderReportKey("k8sv")
 	// ClusterVersionSemverKey is the report key under which cluster k8s semver
 	// version will be provided.
-	ClusterVersionSemverKey = ReportKey("k8sv_semver")
+	ClusterVersionSemverKey = types.ProviderReportKey("k8sv_semver")
 	// ClusterVersionKind represents cluster version provider kind.
 	ClusterVersionKind = Kind(ClusterVersionKey)
 )
@@ -27,7 +29,7 @@ func NewK8sClusterVersionProvider(name string, kc kubernetes.Interface) (Provide
 	return NewK8sClientGoBase(name, ClusterVersionKind, kc, clusterVersionReport)
 }
 
-func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report, error) {
+func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (types.ProviderReport, error) {
 	v, err := clusterVersion(ctx, kc.Discovery())
 	if err != nil {
 		return nil, err
@@ -37,13 +39,13 @@ func clusterVersionReport(ctx context.Context, kc kubernetes.Interface) (Report,
 	if err != nil {
 		// If we fail to decode the version then let's fall back to returning just
 		// the major and minor returned from /version API.
-		return Report{ //nolint:nilerr
+		return types.ProviderReport{ //nolint:nilerr
 			ClusterVersionKey:       v.GitVersion,
 			ClusterVersionSemverKey: fmt.Sprintf("v%s.%s", v.Major, v.Minor),
 		}, nil
 	}
 
-	return Report{
+	return types.ProviderReport{
 		ClusterVersionKey:       v.GitVersion,
 		ClusterVersionSemverKey: "v" + semver.String(),
 	}, nil

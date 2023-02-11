@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
@@ -30,11 +29,11 @@ func (s semicolonDelimited) Serialize(report types.Report, signal types.Signal) 
 	return []byte(prefix + strings.Join(out, "") + "\n"), nil
 }
 
-func serializeReport(report provider.Report) string {
+func serializeReport(report types.ProviderReport) string {
 	var out []string
 	for k, v := range report {
 		switch vv := v.(type) {
-		case provider.Report:
+		case types.ProviderReport:
 			out = append(out, serializeReport(vv))
 		default:
 			out = append(out, fmt.Sprintf("%v=%v;", k, v))
