@@ -3,22 +3,24 @@ package provider
 import (
 	"context"
 	"os"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
 	// HostnameKey is the report key that under which one can find hostname.
-	HostnameKey = ReportKey("hn")
+	HostnameKey = types.ProviderReportKey("hn")
 )
 
 // NewHostnameProvider creates hostname provider.
 func NewHostnameProvider(name string) (Provider, error) {
 	return &functor{
-		f: func(ctx context.Context) (Report, error) {
+		f: func(ctx context.Context) (types.ProviderReport, error) {
 			hostname, err := os.Hostname()
 			if err != nil {
 				return nil, err
 			}
-			return Report{
+			return types.ProviderReport{
 				HostnameKey: hostname,
 			}, nil
 		},

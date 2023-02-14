@@ -46,14 +46,14 @@ func TestManagerBasicLogicWorks(t *testing.T) {
 	{
 		w := NewWorkflow("basic1")
 		{
-			p, err := provider.NewFixedValueProvider("constant1", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant1", types.ProviderReport{
 				"constant1": "value1",
 			})
 			require.NoError(t, err)
 			w.AddProvider(p)
 		}
 		{
-			p, err := provider.NewFixedValueProvider("constant2", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant2", types.ProviderReport{
 				"constant2": "value2",
 			})
 			require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestManagerBasicLogicWorks(t *testing.T) {
 	require.EqualValues(t,
 		types.SignalReport{
 			Report: types.Report{
-				"basic1": provider.Report{
+				"basic1": types.ProviderReport{
 					"constant1": "value1",
 					"constant2": "value2",
 				},
@@ -101,14 +101,14 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 	{
 		w := NewWorkflow("basic1")
 		{
-			p, err := provider.NewFixedValueProvider("constant1", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant1", types.ProviderReport{
 				"constant1": "value1",
 			})
 			require.NoError(t, err)
 			w.AddProvider(p)
 		}
 		{
-			p, err := provider.NewFixedValueProvider("constant2", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant2", types.ProviderReport{
 				"constant2": "value2",
 			})
 			require.NoError(t, err)
@@ -120,14 +120,14 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 	{
 		w := NewWorkflow("basic2")
 		{
-			p, err := provider.NewFixedValueProvider("constant1", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant1", types.ProviderReport{
 				"constant1": "value1",
 			})
 			require.NoError(t, err)
 			w.AddProvider(p)
 		}
 		{
-			p, err := provider.NewFixedValueProvider("constant2", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant2", types.ProviderReport{
 				"constant2": "value2",
 			})
 			require.NoError(t, err)
@@ -155,11 +155,11 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 	require.EqualValues(t,
 		types.SignalReport{
 			Report: types.Report{
-				"basic1": provider.Report{
+				"basic1": types.ProviderReport{
 					"constant1": "value1",
 					"constant2": "value2",
 				},
-				"basic2": provider.Report{
+				"basic2": types.ProviderReport{
 					"constant1": "value1",
 					"constant2": "value2",
 				},
@@ -271,7 +271,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 		require.EqualValues(t,
 			types.SignalReport{
 				Report: types.Report{
-					"cluster-state": provider.Report{
+					"cluster-state": types.ProviderReport{
 						"k8s_nodes_count":    1,
 						"k8s_pods_count":     1,
 						"k8s_services_count": 2,
@@ -281,7 +281,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 						// When that's addressed we should revisit this test.
 						// "k8s_gateways_count": 0,
 					},
-					"identify-platform": provider.Report{
+					"identify-platform": types.ProviderReport{
 						"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 						"k8sv":         "v0.0.0-master+$Format:%H$",
 						"k8sv_semver":  "v0.0.0",
@@ -401,7 +401,7 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 	{
 		w := NewWorkflow("basic")
 		{
-			p, err := provider.NewFixedValueProvider("constant1", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant1", types.ProviderReport{
 				"constant1": "value1",
 			})
 			require.NoError(t, err)
@@ -414,7 +414,7 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 		w := NewWorkflow("basic_with_error")
 		{
 			p, err := provider.NewFunctorProvider("error_provider",
-				func(context.Context) (provider.Report, error) {
+				func(context.Context) (types.ProviderReport, error) {
 					return nil, errors.New("I am an error")
 				},
 			)
@@ -423,7 +423,7 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 		}
 		{
 
-			p, err := provider.NewFixedValueProvider("constant2", provider.Report{
+			p, err := provider.NewFixedValueProvider("constant2", types.ProviderReport{
 				"constant2": "value2",
 			})
 			require.NoError(t, err)
@@ -443,10 +443,10 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 	require.EqualValues(t,
 		types.SignalReport{
 			Report: types.Report{
-				"basic": provider.Report{
+				"basic": types.ProviderReport{
 					"constant1": "value1",
 				},
-				"basic_with_error": provider.Report{
+				"basic_with_error": types.ProviderReport{
 					"constant2": "value2",
 				},
 			},

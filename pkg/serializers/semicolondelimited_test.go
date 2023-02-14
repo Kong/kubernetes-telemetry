@@ -16,11 +16,11 @@ func TestSemicolonDelimited(t *testing.T) {
 
 		out, err := s.Serialize(
 			types.Report{
-				"cluster-state": provider.Report{
+				"cluster-state": types.ProviderReport{
 					"k8s_pods_count":     1,
 					"k8s_services_count": 2,
 				},
-				"identify-platform": provider.Report{
+				"identify-platform": types.ProviderReport{
 					"k8s_arch":     "linux/arm64",
 					"k8sv":         "v1.2.3-gke-a1fdc32f",
 					"k8sv_semver":  "v1.2.3",

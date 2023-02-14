@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 func TestWorkflowState(t *testing.T) {
@@ -20,7 +20,7 @@ func TestWorkflowState(t *testing.T) {
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
 
-	require.EqualValues(t, provider.Report{
+	require.EqualValues(t, types.ProviderReport{
 		"uptime": 0,
 		"hn":     hostname,
 	}, r)

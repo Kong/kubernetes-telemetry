@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 func TestClusterProvider(t *testing.T) {
@@ -285,7 +287,7 @@ func TestClusterProvider(t *testing.T) {
 
 			r, err := p.Provide(context.Background())
 			require.NoError(t, err)
-			require.EqualValues(t, Report{
+			require.EqualValues(t, types.ProviderReport{
 				ClusterProviderKey: tc.expected,
 			}, r)
 		})

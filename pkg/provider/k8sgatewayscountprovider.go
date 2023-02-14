@@ -4,12 +4,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
 	// GatewayCountKey is report key under which the number of pods in the cluster
 	// will be provided.
-	GatewayCountKey = ReportKey("k8s_gateways_count")
+	GatewayCountKey = types.ProviderReportKey("k8s_gateways_count")
 	// GatewayCountKind represents the pod count provider kind.
 	GatewayCountKind = Kind(GatewayCountKey)
 )

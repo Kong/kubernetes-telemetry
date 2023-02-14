@@ -5,11 +5,13 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 // ControllerRuntimeProvideFunc defines a provider func for controller-runtime
 // based providers.
-type ControllerRuntimeProvideFunc func(ctx context.Context, cl client.Client) (Report, error)
+type ControllerRuntimeProvideFunc func(ctx context.Context, cl client.Client) (types.ProviderReport, error)
 
 // k8sControllerRuntimeBase is a base boilerplate struct that allows users to create their
 // own k8s telemetry providers that interact with the cluster using client.Client.
@@ -35,12 +37,12 @@ func NewK8sControllerRuntimeBase(name string, kind Kind, cl client.Client, f Con
 	}, nil
 }
 
-func (p *k8sControllerRuntimeBase) Provide(ctx context.Context) (Report, error) {
+func (p *k8sControllerRuntimeBase) Provide(ctx context.Context) (types.ProviderReport, error) {
 	return p.provideFunc(ctx, p.cl)
 }
 
 // ClientGoProvideFunc defines a provider func for client-go based providers.
-type ClientGoProvideFunc func(ctx context.Context, kc kubernetes.Interface) (Report, error)
+type ClientGoProvideFunc func(ctx context.Context, kc kubernetes.Interface) (types.ProviderReport, error)
 
 // k8sClientGoBase is a base boilerplate struct that allows users to create their
 // own k8s telemetry providers that interact with the cluster using kubernetes.Interface.
@@ -67,6 +69,6 @@ func NewK8sClientGoBase(name string, kind Kind, kc kubernetes.Interface, f Clien
 	}, nil
 }
 
-func (p *k8sClientGoBase) Provide(ctx context.Context) (Report, error) {
+func (p *k8sClientGoBase) Provide(ctx context.Context) (types.ProviderReport, error) {
 	return p.provideFunc(ctx, p.kc)
 }

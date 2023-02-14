@@ -7,11 +7,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
 	// ClusterProviderKey is report key under which the cluster provider will be provided.
-	ClusterProviderKey = ReportKey("k8s_provider")
+	ClusterProviderKey = types.ProviderReportKey("k8s_provider")
 	// ClusterProviderKind represents cluster provider kind.
 	ClusterProviderKind = Kind(ClusterProviderKey)
 )
@@ -36,7 +38,7 @@ func NewK8sClusterProviderProvider(name string, kc kubernetes.Interface) (Provid
 	return NewK8sClientGoBase(name, ClusterProviderKind, kc, clusterProviderReport)
 }
 
-func clusterProviderReport(ctx context.Context, kc kubernetes.Interface) (Report, error) {
+func clusterProviderReport(ctx context.Context, kc kubernetes.Interface) (types.ProviderReport, error) {
 	{
 		// Try to figure out the cluster provider based on the version string
 		// returned by the /version endpoint.
@@ -46,7 +48,7 @@ func clusterProviderReport(ctx context.Context, kc kubernetes.Interface) (Report
 			return nil, err
 		}
 		if p, ok := getClusterProviderFromVersion(cVersion.String()); ok {
-			return Report{
+			return types.ProviderReport{
 				ClusterProviderKey: p,
 			}, nil
 		}
@@ -61,13 +63,13 @@ func clusterProviderReport(ctx context.Context, kc kubernetes.Interface) (Report
 			return nil, err
 		}
 		if p, ok := getClusterProviderFromNodes(nodeList); ok {
-			return Report{
+			return types.ProviderReport{
 				ClusterProviderKey: p,
 			}, nil
 		}
 	}
 
-	return Report{
+	return types.ProviderReport{
 		ClusterProviderKey: ClusterProviderUnknown,
 	}, nil
 }

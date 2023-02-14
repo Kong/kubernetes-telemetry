@@ -3,12 +3,14 @@ package provider
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
 	// NodeCountKey is the report key under which the number of nodes in the cluster
 	// will be provided.
-	NodeCountKey = ReportKey("k8s_nodes_count")
+	NodeCountKey = types.ProviderReportKey("k8s_nodes_count")
 	// NodeCountKind represents the node count provider kind.
 	NodeCountKind = Kind(NodeCountKey)
 )

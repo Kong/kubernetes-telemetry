@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 // Kind presents provider's kind.
@@ -11,5 +13,5 @@ type Kind string
 type Provider interface {
 	Name() string
 	Kind() Kind
-	Provide(context.Context) (Report, error)
+	Provide(context.Context) (types.ProviderReport, error)
 }

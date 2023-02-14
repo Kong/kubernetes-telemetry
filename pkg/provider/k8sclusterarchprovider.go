@@ -6,11 +6,13 @@ import (
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
 	// ClusterArchKey is report key under which cluster architecture will be provided.
-	ClusterArchKey = ReportKey("k8s_arch")
+	ClusterArchKey = types.ProviderReportKey("k8s_arch")
 	// ClusterArchKind represents cluster arch provider kind.
 	ClusterArchKind = Kind(ClusterArchKey)
 )
@@ -21,13 +23,13 @@ func NewK8sClusterArchProvider(name string, kc kubernetes.Interface) (Provider, 
 	return NewK8sClientGoBase(name, ClusterArchKind, kc, clusterArchReport)
 }
 
-func clusterArchReport(ctx context.Context, kc kubernetes.Interface) (Report, error) {
+func clusterArchReport(ctx context.Context, kc kubernetes.Interface) (types.ProviderReport, error) {
 	cArch, err := clusterArch(ctx, kc.Discovery())
 	if err != nil {
 		return nil, err
 	}
 
-	return Report{
+	return types.ProviderReport{
 		ClusterArchKey: cArch,
 	}, nil
 }
