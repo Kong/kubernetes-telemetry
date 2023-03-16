@@ -21,17 +21,9 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ^1.18
-
-    - name: Cache Go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
 
     - name: Run lint
       run: make lint
@@ -46,17 +38,9 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ^1.18
-
-    - name: Cache Go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
 
     - name: Set up gotestfmt
       uses: GoTestTools/gotestfmt-action@v2
