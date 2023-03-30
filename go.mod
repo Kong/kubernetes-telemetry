@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/bombsimon/logrusr/v3 v3.1.0
 	github.com/gammazero/workerpool v1.1.3
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.2.4
 	github.com/pkg/errors v0.9.1
 	github.com/puzpuzpuz/xsync/v2 v2.4.0
 	github.com/sirupsen/logrus v1.9.0
