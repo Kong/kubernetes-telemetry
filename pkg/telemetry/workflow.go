@@ -2,12 +2,12 @@ package telemetry
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"runtime"
 	"sync"
 
 	"github.com/gammazero/workerpool"
-	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
@@ -76,7 +76,7 @@ func (w *workflow) Execute(ctx context.Context) (types.ProviderReport, error) {
 
 			report, err := p.Provide(ctx)
 			if err != nil {
-				chErr <- errors.Wrapf(err, "problem with provider %s", p.Name())
+				chErr <- fmt.Errorf("problem with provider %s: %w", p.Name(), err)
 			}
 
 			chReport <- report
@@ -90,15 +90,15 @@ func (w *workflow) Execute(ctx context.Context) (types.ProviderReport, error) {
 		close(chReport)
 	}()
 
-	var mErr error
+	var mErrs []error
 
 forLoop:
 	for {
 		select {
 		case err := <-chErr:
 			if err != nil {
-				mErr = multierror.Append(mErr,
-					errors.Wrapf(err, "error executing workflow %s", w.Name()),
+				mErrs = append(mErrs,
+					fmt.Errorf("error executing workflow %s: %w", w.Name(), err),
 				)
 			}
 		case r := <-chReport:
@@ -108,5 +108,5 @@ forLoop:
 		}
 	}
 
-	return report, mErr
+	return report, errors.Join(mErrs...)
 }
