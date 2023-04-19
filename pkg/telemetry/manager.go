@@ -2,13 +2,13 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/hashicorp/go-multierror"
 	"github.com/puzpuzpuz/xsync/v2"
 
 	"github.com/kong/kubernetes-telemetry/pkg/log"
@@ -238,14 +238,14 @@ func (m *manager) workflowsLoop() {
 // from all the underlying providers.
 func (m *manager) Report(ctx context.Context) (types.Report, error) {
 	var (
-		mErr   error
+		errs   []error
 		report = types.Report{}
 	)
 
 	m.workflows.Range(func(name string, w Workflow) bool {
 		r, err := w.Execute(ctx)
 		if err != nil {
-			mErr = multierror.Append(mErr, err)
+			errs = append(errs, err)
 		}
 
 		// Add the report regardless if it's partial only omitting empty (nil) reports.
@@ -255,7 +255,7 @@ func (m *manager) Report(ctx context.Context) (types.Report, error) {
 
 		return true
 	})
-	return report, mErr
+	return report, errors.Join(errs...)
 }
 
 // consumerLoop loops over all configured consumers and sends the gathered telemetry
