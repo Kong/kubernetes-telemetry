@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	apitypes "k8s.io/apimachinery/pkg/types"
@@ -333,9 +334,9 @@ func TestDetectRunUnder(t *testing.T) {
 
 func TestDetectServiceDistribution(t *testing.T) {
 	b := fake.NewClientBuilder()
-	// add services/endpoints/pods.
+	// Add services/endpoints/pods.
 	b.WithObjects(
-		// services.
+		// Services.
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "ns1",
@@ -370,83 +371,117 @@ func TestDetectServiceDistribution(t *testing.T) {
 				},
 			},
 		},
-		// service with no endpoints.
+		// Service with no EndpointSlices.
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "ns2",
 				Name:      "service3",
 			},
 		},
-		// endpoints.
-		&corev1.Endpoints{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service1",
-			},
-			Subsets: []corev1.EndpointSubset{
-				{
-					Addresses: []corev1.EndpointAddress{
-						{
-							TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod1"},
-						},
-					},
-				},
-			},
-		},
-		&corev1.Endpoints{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service2",
-			},
-			Subsets: []corev1.EndpointSubset{
-				{
-					Addresses: []corev1.EndpointAddress{
-						{
-							TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod2"},
-						},
-					},
-				},
-			},
-		},
-		&corev1.Endpoints{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service3",
-			},
-			// endpoints with no subsets.
-		},
-		&corev1.Endpoints{
+		// Service with multiple EndpointSlices.
+		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "ns2",
-				Name:      "service1",
+				Name:      "service4",
 			},
-			Subsets: []corev1.EndpointSubset{
+		},
+		// EndpointSlices for Pods.
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns1",
+				Name:      "service1-1",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service1",
+				},
+			},
+			Endpoints: []discoveryv1.Endpoint{
 				{
-					Addresses: []corev1.EndpointAddress{
-						{
-							TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod1"},
-						},
-					},
+					TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod1"},
 				},
 			},
 		},
-		&corev1.Endpoints{
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns1",
+				Name:      "service2-1",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service2",
+				},
+			},
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod2"},
+				},
+			},
+		},
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns1",
+				Name:      "service3-1",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service3",
+				},
+			},
+			// EndpointSlice with no endpoints.
+		},
+		&discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "ns2",
-				Name:      "service2",
+				Name:      "service1-1",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service1",
+				},
 			},
-			Subsets: []corev1.EndpointSubset{
+			Endpoints: []discoveryv1.Endpoint{
 				{
-					Addresses: []corev1.EndpointAddress{
-						{
-							TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod2"},
-						},
-						{},
-					},
+					TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod1"},
 				},
 			},
 		},
-		// pods.
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns2",
+				Name:      "service2-1",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service2",
+				},
+			},
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod2"},
+				},
+			},
+		},
+		// Two EndpointSlices for the same service.
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns2",
+				Name:      "service3-1",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service3",
+				},
+			},
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod3-1"},
+				},
+			},
+		},
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns2",
+				Name:      "service3-2",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service3",
+				},
+			},
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod3-2"},
+				},
+			},
+		},
+		// Pods referenced by EndpointSlices.
 		&corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "ns1",
@@ -495,6 +530,30 @@ func TestDetectServiceDistribution(t *testing.T) {
 				},
 			},
 		},
+		// One Pod has service mesh sidecar, the other doesn't.
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns2",
+				Name:      "pod3-1",
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: "worker"},
+					{Name: "linkerd-proxy"},
+				},
+			},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns2",
+				Name:      "pod3-2",
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: "worker"},
+				},
+			},
+		},
 	)
 
 	c := b.Build()
@@ -502,10 +561,10 @@ func TestDetectServiceDistribution(t *testing.T) {
 		Client: c,
 	}
 
-	expectedTotal := 6
+	const expectedTotal = 7
 	expected := map[MeshKind]int{
 		MeshKindIstio:    2,
-		MeshKindLinkerd:  1,
+		MeshKindLinkerd:  2,
 		MeshKindKuma:     1,
 		MeshKindKongMesh: 1,
 		MeshKindTraefik:  1,
