@@ -11,6 +11,7 @@ linters:
   - errorlint
   - exhaustive
   - exportloopref
+  - forbidigo
   - gci
   - godot
   - gofmt
@@ -56,11 +57,18 @@ linters-settings:
       alias: netv1
     - pkg: k8s.io/api/networking/v1beta1
       alias: netv1beta1
+    - pkg: k8s.io/api/discovery/v1
+      alias: discoveryv1
 
     - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
+  forbidigo:
+    exclude_godoc_examples: false
+    forbid:
+      - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
+      - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
   revive:
     severity: error
     rules:
