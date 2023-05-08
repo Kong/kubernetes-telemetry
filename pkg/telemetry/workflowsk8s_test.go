@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -209,7 +210,6 @@ func TestWorkflowMeshDetect(t *testing.T) {
 	t.Run("properly reports cluster meshes", func(t *testing.T) {
 		b := ctrlclient_fake.NewClientBuilder()
 		b.WithObjects(
-			// services.
 			&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
@@ -244,83 +244,118 @@ func TestWorkflowMeshDetect(t *testing.T) {
 					},
 				},
 			},
-			// service with no endpoints.
+			// Service with no EndpointSlices.
 			&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns2",
 					Name:      "service3",
 				},
 			},
-			// endpoints.
-			&corev1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "service1",
-				},
-				Subsets: []corev1.EndpointSubset{
-					{
-						Addresses: []corev1.EndpointAddress{
-							{
-								TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod1"},
-							},
-						},
-					},
-				},
-			},
-			&corev1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "service2",
-				},
-				Subsets: []corev1.EndpointSubset{
-					{
-						Addresses: []corev1.EndpointAddress{
-							{
-								TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod2"},
-							},
-						},
-					},
-				},
-			},
-			&corev1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "service3",
-				},
-				// endpoints with no subsets.
-			},
-			&corev1.Endpoints{
+			// Service with multiple EndpointSlices.
+			&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns2",
-					Name:      "service1",
+					Name:      "service4",
 				},
-				Subsets: []corev1.EndpointSubset{
+			},
+			// EndpointSlices for Pods.
+			&discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns1",
+					Name:      "service1-1",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service1",
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
 					{
-						Addresses: []corev1.EndpointAddress{
-							{
-								TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod1"},
-							},
-						},
+						TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod1"},
 					},
 				},
 			},
-			&corev1.Endpoints{
+			&discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns1",
+					Name:      "service2-1",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service2",
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns1", Name: "pod2"},
+					},
+				},
+			},
+			&discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns1",
+					Name:      "service3-1",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service3",
+					},
+				},
+				// EndpointSlice with no endpoints.
+			},
+			&discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns2",
-					Name:      "service2",
+					Name:      "service1-1",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service1",
+					},
 				},
-				Subsets: []corev1.EndpointSubset{
+				Endpoints: []discoveryv1.Endpoint{
 					{
-						Addresses: []corev1.EndpointAddress{
-							{
-								TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod2"},
-							},
-							{},
-						},
+						TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod1"},
 					},
 				},
 			},
-			// pods.
+			&discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns2",
+					Name:      "service2-1",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service2",
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod2"},
+					},
+					{},
+				},
+			},
+			// Two EndpointSlices for the same service.
+			&discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns2",
+					Name:      "service3-1",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service3",
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod3-1"},
+					},
+				},
+			},
+			&discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns2",
+					Name:      "service3-2",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service3",
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: "ns2", Name: "pod3-2"},
+					},
+				},
+			},
+			// Pods referenced by EndpointSlices.
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
@@ -362,6 +397,30 @@ func TestWorkflowMeshDetect(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns2",
 					Name:      "pod2",
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "worker"},
+					},
+				},
+			},
+			// One Pod has service mesh sidecar, the other doesn't.
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns2",
+					Name:      "pod3-1",
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "worker"},
+						{Name: "linkerd-proxy"},
+					},
+				},
+			},
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns2",
+					Name:      "pod3-2",
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -493,7 +552,7 @@ func TestWorkflowMeshDetect(t *testing.T) {
 			// We could place them in mesh detect package but that would not be
 			// consistent with other provider report keys.
 			// Ideally we should revisit this at some point.
-			"mdist": "all8,i2,k1,km1,l1,t1",
+			"mdist": "all9,i2,k1,km1,l2,t1",
 			"kinm":  "a3,i2,i3,i4,k2,k3,km2,km3,l2",
 		}, r)
 	})
