@@ -15,11 +15,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	dyn_fake "k8s.io/client-go/dynamic/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
@@ -172,7 +172,8 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 
 func TestManagerWithCatalogWorkflows(t *testing.T) {
 	t.Run("identify platform and cluster state", func(t *testing.T) {
-		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
 
 		objs := []k8sruntime.Object{
 			&corev1.Pod{
@@ -187,12 +188,6 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 							Image: "kong/kubernetes-ingress-controller:2.4",
 						},
 					},
-				},
-			},
-			&gatewayv1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "kong",
-					Name:      "gateway-1",
 				},
 			},
 			&corev1.Service{
@@ -228,19 +223,13 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 			},
 		}
 
-		cl := ctrlclient_fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
+		cl := ctrlclient_fake.
+			NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithRuntimeObjects(objs...).
+			Build()
 
-		dynClient := dyn_fake.NewSimpleDynamicClientWithCustomListKinds(
-			scheme.Scheme,
-			map[schema.GroupVersionResource]string{
-				{
-					Group:    "gateway.networking.k8s.io",
-					Version:  "v1beta1",
-					Resource: "gateways",
-				}: "GatewayList",
-			},
-			objs...,
-		)
+		dynClient := dyn_fake.NewSimpleDynamicClient(cl.Scheme(), objs...)
 
 		clusterStateWorkflow, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
 		require.NoError(t, err)
@@ -268,18 +257,24 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 		report := <-consumer.ch
 		m.Stop()
 
-		require.EqualValues(t,
+		require.Equal(t,
 			types.SignalReport{
 				Report: types.Report{
 					"cluster-state": types.ProviderReport{
 						"k8s_nodes_count":    1,
 						"k8s_pods_count":     1,
 						"k8s_services_count": 2,
-						// TODO: Even though we added Gateway API's schema to schema.Scheme, gateway count provider
-						// doesn't detect it properly due to:
-						// https://github.com/kubernetes/kubernetes/pull/110053.
-						// When that's addressed we should revisit this test.
-						// "k8s_gateways_count": 0,
+						// TODO: Even though we added Gateway API's schema to schema.Scheme, the below count providers
+						// don't detect they properly due to https://github.com/kubernetes/kubernetes/pull/110053.
+						// When that's addressed we should revisit this test and adjust test to check for
+						// provider.GatewayClassCountKey:   1,
+						// provider.GatewayCountKey:        1,
+						// provider.HTTPRouteCountKey:      1,
+						// provider.ReferenceGrantCountKey: 1,
+						// provider.GRPCRouteCountKey:      1,
+						// provider.TCPRouteCountKey:       1,
+						// provider.UDPRouteCountKey:       1,
+						// provider.TLSRouteCountKey:       1,
 					},
 					"identify-platform": types.ProviderReport{
 						"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
