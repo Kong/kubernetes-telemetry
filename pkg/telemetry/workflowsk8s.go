@@ -6,6 +6,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
+	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
 const (
@@ -68,8 +69,15 @@ const (
 //	{
 //	  "k8s_pods_count": 21,
 //	  "k8s_services_count": 3,
-//	  "k8s_gateways_count": 1,
 //	  "k8s_nodes_count": 1
+//	  "k8s_gatewayclasses_count": 1,
+//	  "k8s_gateways_count": 1,
+//	  "k8s_httproutes_count": 1,
+//	  "k8s_grpcroutes_count": 1,
+//	  "k8s_tlsroutes_count": 1,
+//	  "k8s_tcproutes_count": 1,
+//	  "k8s_udproutes_count": 1,
+//	  "k8s_referencegrants_count": 1
 //	}
 func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow, error) {
 	if d == nil {
@@ -78,34 +86,80 @@ func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow,
 
 	w := NewWorkflow(ClusterStateWorkflowName)
 
-	providerPodCount, err := provider.NewK8sPodCountProvider(string(provider.PodCountKey), d)
-	if err != nil {
-		return nil, err
+	coreObjects := []struct {
+		providerCreator func(string, dynamic.Interface) (provider.Provider, error)
+		countKey        types.ProviderReportKey
+	}{
+		{
+			provider.NewK8sPodCountProvider,
+			provider.PodCountKey,
+		},
+		{
+			provider.NewK8sServiceCountProvider,
+			provider.ServiceCountKey,
+		},
+		{
+			provider.NewK8sNodeCountProvider,
+			provider.NodeCountKey,
+		},
 	}
-	w.AddProvider(providerPodCount)
-
-	providerServiceCount, err := provider.NewK8sServiceCountProvider(string(provider.ServiceCountKey), d)
-	if err != nil {
-		return nil, err
-	}
-	w.AddProvider(providerServiceCount)
-
-	providerNodeCount, err := provider.NewK8sNodeCountProvider(string(provider.NodeCountKey), d)
-	if err != nil {
-		return nil, err
-	}
-	w.AddProvider(providerNodeCount)
-
-	// Below listed count providers are added optionally, when the corresponding CRDs are present
-	// in the cluster.
-	providerGatewayCount, err := provider.NewK8sGatewayCountProvider(string(provider.GatewayCountKey), d, rm)
-	if err != nil {
-		if !meta.IsNoMatchError(err) {
+	for _, co := range coreObjects {
+		provider, err := co.providerCreator(string(co.countKey), d)
+		if err != nil {
 			return nil, err
 		}
-		// If there's no kind for Gateway in the cluster then just don't add its count provider.
-	} else {
-		w.AddProvider(providerGatewayCount)
+		w.AddProvider(provider)
+	}
+
+	// Below listed count providers for resources from API group "gateway.networking.k8s.io",
+	// are added optionally, when the corresponding CRDs are present in the cluster.
+	optionalObjects := []struct {
+		providerCreator func(string, dynamic.Interface, meta.RESTMapper) (provider.Provider, error)
+		countKey        types.ProviderReportKey
+	}{
+		{
+			provider.NewK8sGatewayClassCountProvider,
+			provider.GatewayClassCountKey,
+		},
+		{
+			provider.NewK8sGatewayCountProvider,
+			provider.GatewayCountKey,
+		},
+		{
+			provider.NewK8sHTTPRouteCountProvider,
+			provider.HTTPRouteCountKey,
+		},
+		{
+			provider.NewK8sGRPCRouteCountProvider,
+			provider.GRPCRouteCountKey,
+		},
+		{
+			provider.NewK8sTLSRouteCountProvider,
+			provider.TLSRouteCountKey,
+		},
+		{
+			provider.NewK8sTCPRouteCountProvider,
+			provider.TCPRouteCountKey,
+		},
+		{
+			provider.NewK8sUDPRouteCountProvider,
+			provider.UDPRouteCountKey,
+		},
+		{
+			provider.NewK8sReferenceGrantCountProvider,
+			provider.ReferenceGrantCountKey,
+		},
+	}
+	for _, oo := range optionalObjects {
+		provider, err := oo.providerCreator(string(oo.countKey), d, rm)
+		if err != nil {
+			if !meta.IsNoMatchError(err) {
+				return nil, err
+			}
+			// If there's no kind for object in the cluster then just don't add its count provider.
+		} else {
+			w.AddProvider(provider)
+		}
 	}
 
 	return w, nil
