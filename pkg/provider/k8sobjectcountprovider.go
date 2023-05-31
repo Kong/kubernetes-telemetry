@@ -85,6 +85,6 @@ func (k *k8sObjectCount) Provide(ctx context.Context) (types.ProviderReport, err
 }
 
 func (k *k8sObjectCount) GVRInCluster(rm meta.RESTMapper) error {
-	_, err := rm.KindFor(k.gvr)
+	_, err := rm.KindsFor(k.gvr)
 	return err
 }

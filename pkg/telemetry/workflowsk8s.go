@@ -1,6 +1,8 @@
 package telemetry
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -153,6 +155,7 @@ func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow,
 	for _, oo := range optionalObjects {
 		provider, err := oo.providerCreator(string(oo.countKey), d, rm)
 		if err != nil {
+			fmt.Println("error from provider creator: ", err)
 			if !meta.IsNoMatchError(err) {
 				return nil, err
 			}
