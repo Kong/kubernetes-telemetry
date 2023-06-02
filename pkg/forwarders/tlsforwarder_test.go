@@ -160,7 +160,7 @@ func acceptLoop(t *testing.T, l net.Listener, wg *sync.WaitGroup, expectedData [
 }
 
 func handleClient(t *testing.T, conn net.Conn, expectedData []string, wg *sync.WaitGroup) {
-	defer conn.Close() //nolint:gosec
+	defer conn.Close()
 
 	t.Logf("server: accepted from %s", conn.RemoteAddr())
 	tlscon, ok := conn.(*tls.Conn)

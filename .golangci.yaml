@@ -4,7 +4,6 @@ linters:
   enable:
   - asciicheck
   - bodyclose
-  - depguard
   - dogsled
   - durationcheck
   - errcheck
@@ -67,8 +66,8 @@ linters-settings:
   forbidigo:
     exclude_godoc_examples: false
     forbid:
-      - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
-      - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
+    - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
+    - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
   revive:
     severity: error
     rules:
