@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -378,17 +377,17 @@ func (d *Detector) DetectServiceDistribution(ctx context.Context) (*ServiceDistr
 
 	serviceList, err := d.listAllServices(ctx, defaultPageSize)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list services in cluster")
+		return nil, fmt.Errorf("failed to list services in cluster: %w", err)
 	}
 
 	endpointsPerSvc, err := d.listAllEndpointsPerService(ctx, defaultPageSize)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list endpoints in cluster")
+		return nil, fmt.Errorf("failed to list endpoints in cluster: %w", err)
 	}
 
 	pods, err := d.listAllPods(ctx, defaultPageSize)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to list pods in cluster")
+		return nil, fmt.Errorf("failed to list pods in cluster: %w", err)
 	}
 
 	ret := &ServiceDistributionResults{
