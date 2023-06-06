@@ -17,6 +17,7 @@ linters:
   - gofumpt
   - goimports
   - gomnd
+  - gomodguard
   - gosec
   - govet
   - importas
@@ -73,6 +74,25 @@ linters-settings:
     rules:
     - name: exported
       disabled: false
+  gomodguard:
+    blocked:
+      modules:
+      - github.com/ghodss/yaml:
+          recommendations:
+          - sigs.k8s.io/yaml
+      - gopkg.in/yaml.v2:
+          recommendations:
+          - sigs.k8s.io/yaml
+      - gopkg.in/yaml.v3:
+          recommendations:
+          - sigs.k8s.io/yaml
+      - github.com/pkg/errors:
+          recommenddations:
+          - fmt
+          - errors
+      - golang.org/x/net/context:
+          recommenddations:
+          - context
 issues:
   fix: true
   # Independently of option `exclude` we use default exclude patterns,
