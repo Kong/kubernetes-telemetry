@@ -3,9 +3,7 @@ package forwarders
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -21,6 +19,64 @@ import (
 )
 
 func TestTLSForwarder(t *testing.T) {
+	log := logrusr.New(logrus.New())
+	telemetryServer := newTelemetryTestServer(t, "localhost:0")
+	go func() {
+		telemetryServer.RunAndAssertExpectedData(
+			t,
+			[]string{
+				"<14>signal=test-signal;key=value;\n",
+				"<14>signal=test-signal-2;key=value;\n",
+			},
+		)
+	}()
+
+	tf, err := NewTLSForwarder(
+		telemetryServer.Addr(),
+		log,
+		func(c *tls.Config) {
+			c.InsecureSkipVerify = true
+		},
+	)
+	require.NoError(t, err)
+
+	serializer := serializers.NewSemicolonDelimited()
+	require.NotNil(t, serializer)
+
+	consumer := telemetry.NewConsumer(serializer, tf)
+
+	m, err := telemetry.NewManager(
+		"test-ping",
+		telemetry.OptManagerPeriod(time.Hour),
+		telemetry.OptManagerLogger(log),
+	)
+	require.NoError(t, err)
+
+	w := telemetry.NewWorkflow("test1")
+	p, err := provider.NewFixedValueProvider("test1-provider", types.ProviderReport{
+		"key": "value",
+	})
+	require.NoError(t, err)
+	w.AddProvider(p)
+	m.AddWorkflow(w)
+	require.NoError(t, m.AddConsumer(consumer))
+	require.NoError(t, m.Start())
+
+	require.NoError(t, m.TriggerExecute(context.Background(), "test-signal"))
+	require.NoError(t, m.TriggerExecute(context.Background(), "test-signal-2"))
+
+	telemetryServer.Done()
+
+	m.Stop()
+}
+
+type telemetryServer struct {
+	listener net.Listener
+	done     chan struct{}
+}
+
+func newTelemetryTestServer(t *testing.T, addr string) telemetryServer {
+	t.Helper()
 	const (
 		rootPEM = `-----BEGIN CERTIFICATE-----
 MIIDzDCCArSgAwIBAgIJAP5AVMhOiD+WMA0GCSqGSIb3DQEBCwUAMHExCzAJBgNV
@@ -75,126 +131,72 @@ f3cb9gYaLWdmvkx8p3g=
 -----END PRIVATE KEY-----`
 	)
 
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM([]byte(rootPEM))
-	require.True(t, ok)
-
 	tlsCert, err := tls.X509KeyPair([]byte(rootPEM), []byte(keyPEM))
 	require.NoError(t, err)
 
-	listener, err := tls.Listen("tcp4", "localhost:0",
+	listener, err := tls.Listen(
+		"tcp4",
+		addr,
 		&tls.Config{
-			RootCAs:      roots,
-			Certificates: []tls.Certificate{tlsCert},
-			// Tried to actually verify the certificates in this test but was getting the following error
-			// event though 127.0.0.1 and localhost were added to alt_names in openssl config:
-			// failed to connect to reporting server: x509: cannot validate certificate for 127.0.0.1 because it doesn't contain any IP SANs
+			Certificates:       []tls.Certificate{tlsCert},
 			InsecureSkipVerify: true, //nolint:gosec
 		},
 	)
 	require.NoError(t, err)
-	require.NotNil(t, listener)
 	t.Logf("TLS server address %s", listener.Addr().String())
 
-	var wg sync.WaitGroup
-	go acceptLoop(t, listener, &wg,
-		[]string{
-			"<14>signal=test-signal;key=value;\n",
-			"<14>signal=test-signal-2;key=value;\n",
-		},
-	)
-
-	serializer := serializers.NewSemicolonDelimited()
-	require.NotNil(t, serializer)
-
-	log := logrusr.New(logrus.New())
-	tf, err := NewTLSForwarder(listener.Addr().String(), log,
-		func(c *tls.Config) {
-			c.RootCAs = roots
-			c.Certificates = []tls.Certificate{tlsCert}
-			c.InsecureSkipVerify = true
-		},
-	)
-	require.NoError(t, err)
-	require.NotNil(t, tf)
-
-	consumer := telemetry.NewConsumer(serializer, tf)
-
-	m, err := telemetry.NewManager(
-		"test-ping",
-		telemetry.OptManagerPeriod(time.Hour),
-		telemetry.OptManagerLogger(log),
-	)
-	require.NoError(t, err)
-
-	w := telemetry.NewWorkflow("test1")
-	p, err := provider.NewFixedValueProvider("test1-provider", types.ProviderReport{
-		"key": "value",
-	})
-	require.NoError(t, err)
-	w.AddProvider(p)
-	m.AddWorkflow(w)
-	require.NoError(t, m.AddConsumer(consumer))
-	require.NoError(t, m.Start())
-
-	wg.Add(1)
-	require.NoError(t, m.TriggerExecute(context.Background(), "test-signal"))
-	wg.Add(1)
-	require.NoError(t, m.TriggerExecute(context.Background(), "test-signal-2"))
-	wg.Wait()
-
-	require.NoError(t, listener.Close())
-	m.Stop()
-}
-
-func acceptLoop(t *testing.T, l net.Listener, wg *sync.WaitGroup, expectedData []string) {
-	t.Log("server: accepting...")
-
-	// Accept just once because TLSForwarder persists the connection
-	conn, err := l.Accept()
-	if err != nil {
-		t.Logf("server: Accept() returned error: %v", err)
-		return
+	return telemetryServer{
+		listener: listener,
+		done:     make(chan struct{}),
 	}
-	handleClient(t, conn, expectedData, wg)
 }
 
-func handleClient(t *testing.T, conn net.Conn, expectedData []string, wg *sync.WaitGroup) {
-	defer conn.Close()
+func (ts telemetryServer) Addr() string {
+	return ts.listener.Addr().String()
+}
 
-	t.Logf("server: accepted from %s", conn.RemoteAddr())
-	tlscon, ok := conn.(*tls.Conn)
-	if ok {
-		t.Log("server: connection ok")
-		state := tlscon.ConnectionState()
-		for _, v := range state.PeerCertificates {
-			t.Log(x509.MarshalPKIXPublicKey(v.PublicKey))
+func (ts telemetryServer) Done() {
+	<-ts.done
+}
+
+func (ts telemetryServer) RunAndAssertExpectedData(t *testing.T, expectedData []string) {
+	t.Log("server: accepting...")
+	receivedData := make(chan string, len(expectedData))
+	go func() {
+		for {
+			conn, err := ts.listener.Accept()
+			if err != nil {
+				t.Logf("server: Accept() returned error: %v", err)
+				return
+			}
+			go handleConnection(t, conn, receivedData)
+		}
+	}()
+	defer ts.listener.Close()
+	for _, expected := range expectedData {
+		select {
+		case received := <-receivedData:
+			assert.Equal(t, expected, received)
+		case <-time.After(5 * time.Second):
+			assert.Failf(t, "timeout waiting for data", "expected data: %q", expected)
 		}
 	}
+	ts.done <- struct{}{}
+}
 
-	count := 0
-	for ; count < len(expectedData); count++ {
+func handleConnection(t *testing.T, conn net.Conn, receivedData chan<- string) {
+	defer conn.Close()
+	t.Logf("server: accepted from %s", conn.RemoteAddr())
+	for {
 		buf := make([]byte, 512)
-		t.Log("server: conn: waiting")
 		n, err := conn.Read(buf)
 		if err != nil {
 			t.Logf("server: conn: read: %s", err)
-			break
+			return
 		}
 
-		assert.Equal(t, expectedData[count], string(buf[:n]))
-		t.Logf("server: conn: echo %q\n", string(buf[:n]))
-
-		n, err = conn.Write(buf[:n])
-		t.Logf("server: conn: wrote %d bytes", n)
-		if err != nil {
-			t.Logf("server: write: %s", err)
-			break
-		}
-
-		wg.Done()
+		data := string(buf[:n])
+		t.Logf("server: conn: echo %q", data)
+		receivedData <- data
 	}
-
-	assert.Equal(t, len(expectedData), count)
-	t.Log("server: conn: closed")
 }
