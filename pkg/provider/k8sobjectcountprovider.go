@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+	"errors"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/kong/kubernetes-telemetry/pkg/types"
@@ -47,6 +49,19 @@ func NewK8sObjectCountProviderWithRESTMapper(name string, kind Kind, d dynamic.I
 	}
 
 	if err := p.(*k8sObjectCount).GVRInCluster(rm); err != nil {
+		// If there's no kind for object in the cluster then just don't add its count provider.
+		if meta.IsNoMatchError(err) {
+			return nil, ErrGVRNotAvailable{
+				GVR:    gvr,
+				Reason: err,
+			}
+		}
+		if errG := (&discovery.ErrGroupDiscoveryFailed{}); errors.As(err, &errG) {
+			return nil, ErrGVRNotAvailable{
+				GVR:    gvr,
+				Reason: errG,
+			}
+		}
 		return nil, err
 	}
 

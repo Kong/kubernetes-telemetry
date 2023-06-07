@@ -267,6 +267,112 @@ func TestWorkflowClusterState(t *testing.T) {
 			provider.TLSRouteCountKey:  1,
 		}, r)
 	})
+
+	t.Run("properly reports cluster state without GW API objects when their CRDs are missing", func(t *testing.T) {
+		objs := []k8sruntime.Object{
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "kong-ingress-controller",
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "ingress-controller",
+							Image: "kong/kubernetes-ingress-controller:2.4",
+						},
+					},
+				},
+			},
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "namespace1",
+					Name:      "srv",
+				},
+			},
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "namespace2",
+					Name:      "srv",
+				},
+			},
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"kubeadm.alpha.kubernetes.io/cri-socket":                 "unix:///run/containerd/containerd.sock",
+						"node.alpha.kubernetes.io/ttl":                           "0",
+						"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+					},
+					Labels: map[string]string{
+						"beta.kubernetes.io/arch":                                 "arm64",
+						"beta.kubernetes.io/os":                                   "linux",
+						"kubernetes.io/arch":                                      "arm64",
+						"kubernetes.io/hostname":                                  "kong-control-plane",
+						"kubernetes.io/os":                                        "linux",
+						"node-role.kubernetes.io/control-plane":                   "",
+						"node.kubernetes.io/exclude-from-external-load-balancers": "",
+					},
+					Name: "kong-control-plane",
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "gce://k8s/europe-north1-a/gke-cluster-user-default-pool-e1111111-aaii",
+				},
+			},
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"kubeadm.alpha.kubernetes.io/cri-socket":                 "unix:///run/containerd/containerd.sock",
+						"node.alpha.kubernetes.io/ttl":                           "0",
+						"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+					},
+					Labels: map[string]string{
+						"beta.kubernetes.io/arch":                                 "arm64",
+						"beta.kubernetes.io/os":                                   "linux",
+						"kubernetes.io/arch":                                      "arm64",
+						"kubernetes.io/hostname":                                  "worker-node-1",
+						"kubernetes.io/os":                                        "linux",
+						"node-role.kubernetes.io/control-plane":                   "",
+						"node.kubernetes.io/exclude-from-external-load-balancers": "",
+					},
+					Name: "worker-node-1",
+				},
+			},
+		}
+
+		cl := ctrlclient_fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithRuntimeObjects(objs...).
+			Build()
+
+		// Hack for Kind "Gateway" to work.
+		dynClient := dyn_fake.NewSimpleDynamicClient(
+			scheme.Scheme,
+			objs...,
+		)
+
+		w, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
+		require.NoError(t, err)
+		require.NotNil(t, w)
+
+		r, err := w.Execute(context.Background())
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		// This technically wouldn't fail with missing error check against
+		// discovery.ErrGroupDiscoveryFailed type in NewClusterStateWorkflow()
+		// because test code uses apimachinery restmapper [1] while production
+		// code when running the operator uses the controller runtime mapper [2].
+		//
+		// [1]: https://github.com/kubernetes/apimachinery/blob/16053f78e9258e6c227f5e704d35c67e61868d12/pkg/api/meta/restmapper.go#L360-L362
+		// [2]: https://github.com/kubernetes-sigs/controller-runtime/blob/e54088c8c7da82111b4508bdaf189c45d1344f00/pkg/client/apiutil/restmapper.go#L67-L69
+		require.EqualValues(t, types.ProviderReport{
+			// core v1
+			provider.NodeCountKey:    2,
+			provider.PodCountKey:     1,
+			provider.ServiceCountKey: 2,
+			// gateway.networking.k8s.io
+			// No Gateway API related objects are reported and also no error is returned.
+		}, r)
+	})
 }
 
 func TestWorkflowMeshDetect(t *testing.T) {
