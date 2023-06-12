@@ -21,8 +21,14 @@ import (
 func TestTLSForwarder(t *testing.T) {
 	log := logrusr.New(logrus.New())
 	telemetryServer := newTelemetryTestServer(t, "localhost:0")
+
+	// This is the time limit for the whole test.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	go func() {
 		telemetryServer.RunAndAssertExpectedData(
+			ctx,
 			t,
 			[]string{
 				"<14>signal=test-signal;key=value;\n",
@@ -62,8 +68,8 @@ func TestTLSForwarder(t *testing.T) {
 	require.NoError(t, m.AddConsumer(consumer))
 	require.NoError(t, m.Start())
 
-	require.NoError(t, m.TriggerExecute(context.Background(), "test-signal"))
-	require.NoError(t, m.TriggerExecute(context.Background(), "test-signal-2"))
+	require.NoError(t, m.TriggerExecute(ctx, "test-signal"))
+	require.NoError(t, m.TriggerExecute(ctx, "test-signal-2"))
 
 	telemetryServer.Done()
 
@@ -159,7 +165,7 @@ func (ts telemetryServer) Done() {
 	<-ts.done
 }
 
-func (ts telemetryServer) RunAndAssertExpectedData(t *testing.T, expectedData []string) {
+func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testing.T, expectedData []string) {
 	t.Log("server: accepting...")
 	receivedData := make(chan string, len(expectedData))
 	go func() {
@@ -177,7 +183,7 @@ func (ts telemetryServer) RunAndAssertExpectedData(t *testing.T, expectedData []
 		select {
 		case received := <-receivedData:
 			assert.Equal(t, expected, received)
-		case <-time.After(5 * time.Second):
+		case <-ctx.Done():
 			assert.Failf(t, "timeout waiting for data", "expected data: %q", expected)
 		}
 	}
