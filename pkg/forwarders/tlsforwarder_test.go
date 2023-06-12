@@ -190,6 +190,8 @@ func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testi
 	ts.done <- struct{}{}
 }
 
+// handleConnection reads data from the connection in the loop (client or error ends the connection)
+// and writes it to the channel receivedData. In case of error, it logs the error and returns.
 func handleConnection(t *testing.T, conn net.Conn, receivedData chan<- string) {
 	defer conn.Close()
 	t.Logf("server: accepted from %s", conn.RemoteAddr())
