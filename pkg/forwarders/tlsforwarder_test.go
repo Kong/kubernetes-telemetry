@@ -3,8 +3,8 @@ package forwarders
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -26,20 +26,9 @@ func TestTLSForwarder(t *testing.T) {
 	// This is the time limit for the whole test.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		telemetryServer.RunAndAssertExpectedData(
-			ctx,
-			t,
-			&wg,
-			[]string{
-				"<14>signal=test-signal;key=value;\n",
-				"<14>signal=test-signal-2;key=value;\n",
-			},
-		)
-	}()
+	receivedChan := telemetryServer.Run(ctx, t)
+
 	telemetryServerAddr := telemetryServer.Addr()
 	tf, err := NewTLSForwarder(
 		telemetryServerAddr,
@@ -65,7 +54,8 @@ func TestTLSForwarder(t *testing.T) {
 	w := telemetry.NewWorkflow("test1")
 	p, err := provider.NewFixedValueProvider("test1-provider", types.ProviderReport{
 		"key": "value",
-	})
+	},
+	)
 	require.NoError(t, err)
 	w.AddProvider(p)
 	m.AddWorkflow(w)
@@ -75,28 +65,24 @@ func TestTLSForwarder(t *testing.T) {
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal"))
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal-2"))
 
-	wg.Wait()
+	assertData(ctx, t, receivedChan, []string{
+		"<14>signal=test-signal;key=value;\n",
+		"<14>signal=test-signal-2;key=value;\n",
+	})
+	require.NoError(t, telemetryServer.Close())
 
-	// Recreate server with the same address to simulate unreliable network,
-	// unexpected server shutdown, etc. Send some more data to make sure,
-	// that the connection is reestablished.
+	t.Log("Recreate server with the same address to simulate unreliable network/server")
 	telemetryServer = newTelemetryTestServer(t, telemetryServerAddr)
-	wg.Add(1)
-	go func() {
-		telemetryServer.RunAndAssertExpectedData(
-			ctx,
-			t,
-			&wg,
-			[]string{
-				"<14>signal=test-signal-3;key=value;\n",
-				"<14>signal=test-signal-4;key=value;\n",
-			},
-		)
-	}()
+	receivedChan = telemetryServer.Run(ctx, t)
 
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal-3"))
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal-4"))
-	wg.Wait()
+
+	assertData(ctx, t, receivedChan, []string{
+		"<14>signal=test-signal-3;key=value;\n",
+		"<14>signal=test-signal-4;key=value;\n",
+	})
+	require.NoError(t, telemetryServer.Close())
 
 	m.Stop()
 }
@@ -163,7 +149,6 @@ f3cb9gYaLWdmvkx8p3g=
 
 	tlsCert, err := tls.X509KeyPair([]byte(rootPEM), []byte(keyPEM))
 	require.NoError(t, err)
-
 	listener, err := tls.Listen(
 		"tcp4",
 		addr,
@@ -184,20 +169,35 @@ func (ts telemetryServer) Addr() string {
 	return ts.listener.Addr().String()
 }
 
-func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testing.T, wg *sync.WaitGroup, expectedData []string) {
-	t.Log("server: accepting...")
-	receivedData := make(chan string, len(expectedData))
+func (ts telemetryServer) Close() error {
+	return ts.listener.Close()
+}
+
+func (ts telemetryServer) Run(ctx context.Context, t *testing.T) <-chan string {
+	receivedData := make(chan string)
 	go func() {
 		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			conn, err := ts.listener.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					t.Logf("server: closed, not accepting more connections")
+					return
+				}
 				t.Logf("server: Accept() returned error: %v", err)
 				return
 			}
 			go handleConnection(t, conn, receivedData)
 		}
 	}()
-	defer ts.listener.Close()
+	return receivedData
+}
+
+func assertData(ctx context.Context, t *testing.T, receivedData <-chan string, expectedData []string) {
 	for _, expected := range expectedData {
 		select {
 		case received := <-receivedData:
@@ -206,14 +206,11 @@ func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testi
 			assert.Failf(t, "timeout waiting for data", "expected data: %q", expected)
 		}
 	}
-	wg.Done()
 }
 
 // handleConnection reads data from the connection in the loop (client or error ends the connection)
 // and writes it to the channel receivedData. In case of error, it logs the error and returns.
 func handleConnection(t *testing.T, conn net.Conn, receivedData chan<- string) {
-	t.Helper()
-
 	defer conn.Close()
 	t.Logf("server: accepted from %s", conn.RemoteAddr())
 	for {
