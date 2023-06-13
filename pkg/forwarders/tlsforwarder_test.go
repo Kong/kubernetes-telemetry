@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,11 +26,12 @@ func TestTLSForwarder(t *testing.T) {
 	// This is the time limit for the whole test.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
+	var wg sync.WaitGroup
 	go func() {
 		telemetryServer.RunAndAssertExpectedData(
 			ctx,
 			t,
+			&wg,
 			[]string{
 				"<14>signal=test-signal;key=value;\n",
 				"<14>signal=test-signal-2;key=value;\n",
@@ -71,14 +73,13 @@ func TestTLSForwarder(t *testing.T) {
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal"))
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal-2"))
 
-	telemetryServer.Done()
+	wg.Wait()
 
 	m.Stop()
 }
 
 type telemetryServer struct {
 	listener net.Listener
-	done     chan struct{}
 }
 
 func newTelemetryTestServer(t *testing.T, addr string) telemetryServer {
@@ -153,7 +154,6 @@ f3cb9gYaLWdmvkx8p3g=
 
 	return telemetryServer{
 		listener: listener,
-		done:     make(chan struct{}),
 	}
 }
 
@@ -161,13 +161,10 @@ func (ts telemetryServer) Addr() string {
 	return ts.listener.Addr().String()
 }
 
-func (ts telemetryServer) Done() {
-	<-ts.done
-}
-
-func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testing.T, expectedData []string) {
+func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testing.T, wg *sync.WaitGroup, expectedData []string) {
 	t.Log("server: accepting...")
 	receivedData := make(chan string, len(expectedData))
+	wg.Add(1)
 	go func() {
 		for {
 			conn, err := ts.listener.Accept()
@@ -187,7 +184,7 @@ func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testi
 			assert.Failf(t, "timeout waiting for data", "expected data: %q", expected)
 		}
 	}
-	ts.done <- struct{}{}
+	wg.Done()
 }
 
 // handleConnection reads data from the connection in the loop (client or error ends the connection)
