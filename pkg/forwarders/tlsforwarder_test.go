@@ -27,6 +27,8 @@ func TestTLSForwarder(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	var wg sync.WaitGroup
+
+	wg.Add(1)
 	go func() {
 		telemetryServer.RunAndAssertExpectedData(
 			ctx,
@@ -38,9 +40,9 @@ func TestTLSForwarder(t *testing.T) {
 			},
 		)
 	}()
-
+	telemetryServerAddr := telemetryServer.Addr()
 	tf, err := NewTLSForwarder(
-		telemetryServer.Addr(),
+		telemetryServerAddr,
 		log,
 		func(c *tls.Config) {
 			c.InsecureSkipVerify = true
@@ -73,6 +75,27 @@ func TestTLSForwarder(t *testing.T) {
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal"))
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal-2"))
 
+	wg.Wait()
+
+	// Recreate server with the same address to simulate unreliable network,
+	// unexpected server shutdown, etc. Send some more data to make sure,
+	// that the connection is reestablished.
+	telemetryServer = newTelemetryTestServer(t, telemetryServerAddr)
+	wg.Add(1)
+	go func() {
+		telemetryServer.RunAndAssertExpectedData(
+			ctx,
+			t,
+			&wg,
+			[]string{
+				"<14>signal=test-signal-3;key=value;\n",
+				"<14>signal=test-signal-4;key=value;\n",
+			},
+		)
+	}()
+
+	require.NoError(t, m.TriggerExecute(ctx, "test-signal-3"))
+	require.NoError(t, m.TriggerExecute(ctx, "test-signal-4"))
 	wg.Wait()
 
 	m.Stop()
@@ -164,7 +187,6 @@ func (ts telemetryServer) Addr() string {
 func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testing.T, wg *sync.WaitGroup, expectedData []string) {
 	t.Log("server: accepting...")
 	receivedData := make(chan string, len(expectedData))
-	wg.Add(1)
 	go func() {
 		for {
 			conn, err := ts.listener.Accept()
@@ -191,7 +213,7 @@ func (ts telemetryServer) RunAndAssertExpectedData(ctx context.Context, t *testi
 // and writes it to the channel receivedData. In case of error, it logs the error and returns.
 func handleConnection(t *testing.T, conn net.Conn, receivedData chan<- string) {
 	t.Helper()
-	
+
 	defer conn.Close()
 	t.Logf("server: accepted from %s", conn.RemoteAddr())
 	for {
