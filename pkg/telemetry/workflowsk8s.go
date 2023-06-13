@@ -1,6 +1,8 @@
 package telemetry
 
 import (
+	"errors"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -151,15 +153,15 @@ func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow,
 		},
 	}
 	for _, oo := range optionalObjects {
-		provider, err := oo.providerCreator(string(oo.countKey), d, rm)
+		p, err := oo.providerCreator(string(oo.countKey), d, rm)
 		if err != nil {
-			if !meta.IsNoMatchError(err) {
-				return nil, err
+			if errGVR := (provider.ErrGVRNotAvailable{}); errors.As(err, &errGVR) {
+				// GVR unavailable, just skip it.
+				continue
 			}
-			// If there's no kind for object in the cluster then just don't add its count provider.
-		} else {
-			w.AddProvider(provider)
+			return nil, err
 		}
+		w.AddProvider(p)
 	}
 
 	return w, nil
