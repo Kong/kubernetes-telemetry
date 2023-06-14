@@ -63,10 +63,11 @@ func TestTLSForwarder(t *testing.T) {
 	require.NoError(t, m.Start())
 
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal"))
-	require.NoError(t, m.TriggerExecute(ctx, "test-signal-2"))
-
 	assertData(ctx, t, receivedChan, []string{
 		"<14>signal=test-signal;key=value;\n",
+	})
+	require.NoError(t, m.TriggerExecute(ctx, "test-signal-2"))
+	assertData(ctx, t, receivedChan, []string{
 		"<14>signal=test-signal-2;key=value;\n",
 	})
 	require.NoError(t, telemetryServer.Close())
@@ -76,10 +77,11 @@ func TestTLSForwarder(t *testing.T) {
 	receivedChan = telemetryServer.Run(ctx, t)
 
 	require.NoError(t, m.TriggerExecute(ctx, "test-signal-3"))
-	require.NoError(t, m.TriggerExecute(ctx, "test-signal-4"))
-
 	assertData(ctx, t, receivedChan, []string{
 		"<14>signal=test-signal-3;key=value;\n",
+	})
+	require.NoError(t, m.TriggerExecute(ctx, "test-signal-4"))
+	assertData(ctx, t, receivedChan, []string{
 		"<14>signal=test-signal-4;key=value;\n",
 	})
 	require.NoError(t, telemetryServer.Close())
