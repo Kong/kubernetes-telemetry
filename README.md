@@ -1,4 +1,7 @@
 # Kong Kubernetes Telemetry
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/Kong/kubernetes-telemetry?label=Latest%20tag)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kong/kubernetes-telemetry)](https://goreportcard.com/report/github.com/kong/kubernetes-telemetry)
+[![Go Reference](https://pkg.go.dev/badge/github.com/kong/kubernetes-telemetry.svg)](https://pkg.go.dev/github.com/kong/kubernetes-telemetry)
 
 Toolkit for telemetry data for [Kong's][kong] Kubernetes products, such as the
 [Kong Kubernetes Ingress Controller (KIC)][kic].
