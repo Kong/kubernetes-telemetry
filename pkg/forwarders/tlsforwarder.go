@@ -3,6 +3,7 @@ package forwarders
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -22,7 +23,9 @@ var defaultTLSConf = tls.Config{
 
 type tlsForwarder struct {
 	logger logr.Logger
-	conn   *tls.Conn
+
+	tlsConf *tls.Config
+	address string
 }
 
 // TLSOpt defines an option type that manipulates *tls.Config.
@@ -36,21 +39,10 @@ func NewTLSForwarder(address string, logger logr.Logger, tlsOpts ...TLSOpt) (*tl
 		opt(tlsConf)
 	}
 
-	conn, err := tls.DialWithDialer(
-		&net.Dialer{
-			Timeout: defaultTimeout,
-		},
-		"tcp",
-		address,
-		tlsConf,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to reporting server: %w", err)
-	}
-
 	return &tlsForwarder{
-		logger: logger,
-		conn:   conn,
+		logger:  logger,
+		tlsConf: tlsConf,
+		address: address,
 	}, nil
 }
 
@@ -60,21 +52,36 @@ func (tf *tlsForwarder) Name() string {
 }
 
 // Forward forwards the received payload to the configured TLS endpoint.
-func (tf *tlsForwarder) Forward(ctx context.Context, payload []byte) error {
+func (tf *tlsForwarder) Forward(ctx context.Context, payload []byte) (err error) {
+	conn, err := tls.DialWithDialer(
+		&net.Dialer{
+			Timeout: defaultTimeout,
+		},
+		"tcp",
+		tf.address,
+		tf.tlsConf,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to connect to reporting server: %w", err)
+	}
+	// Set named return value in defer to not swallow the error returned by Close()
+	// and use errors.Join() to preserve any previously returned error. Go assigns
+	// explicitly returned value to named value before executing the deferred function.
+	defer func() {
+		err = errors.Join(err, conn.Close())
+	}()
+
 	var deadline time.Time
 	if d, ok := ctx.Deadline(); ok {
 		deadline = d
 	} else {
 		deadline = time.Now().Add(defaultDeadline)
 	}
-
-	err := tf.conn.SetDeadline(deadline)
-	if err != nil {
+	if err := conn.SetDeadline(deadline); err != nil {
 		return fmt.Errorf("failed to set report connection deadline: %w", err)
 	}
 
-	_, err = tf.conn.Write(payload)
-	if err != nil {
+	if _, err := conn.Write(payload); err != nil {
 		return fmt.Errorf("failed to send report: %w", err)
 	}
 	return nil
