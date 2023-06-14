@@ -201,7 +201,7 @@ func (m *manager) workflowsLoop() {
 	for {
 		select {
 		case <-m.done:
-			break
+			return
 
 		case signal := <-ch:
 			ctx, cancel := context.WithTimeout(context.Background(), m.period)
