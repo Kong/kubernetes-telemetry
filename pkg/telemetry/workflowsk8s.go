@@ -47,11 +47,16 @@ func NewIdentifyPlatformWorkflow(kc kubernetes.Interface) (Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
+	pOpenShiftVersionProvider, err := provider.NewOpenShiftVersionProvider(string(provider.OpenShiftVersionKey), kc)
+	if err != nil {
+		return nil, err
+	}
 
 	w := NewWorkflow(IdentifyPlatformWorkflowName)
 	w.AddProvider(pClusterArch)
 	w.AddProvider(pClusterVersion)
 	w.AddProvider(pClusterProvider)
+	w.AddProvider(pOpenShiftVersionProvider)
 
 	return w, nil
 }

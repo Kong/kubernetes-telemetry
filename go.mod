@@ -3,6 +3,7 @@ module github.com/kong/kubernetes-telemetry
 go 1.20
 
 require (
+	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v3 v3.1.0
 	github.com/gammazero/workerpool v1.1.3
 	github.com/go-logr/logr v1.2.4
