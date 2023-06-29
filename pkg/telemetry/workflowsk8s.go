@@ -27,6 +27,7 @@ const (
 //	  "k8sv": "v1.24.1-gke.1400",
 //	  "k8sv_semver": "v1.24.1",
 //	  "k8s_provider": "GKE"
+//	  "openshift_version": "4.13.0"
 //	}
 func NewIdentifyPlatformWorkflow(kc kubernetes.Interface) (Workflow, error) {
 	if kc == nil {

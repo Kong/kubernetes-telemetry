@@ -29,13 +29,12 @@ const (
 	ImageVersionVariable = "OPERATOR_IMAGE_VERSION"
 )
 
-// NewOpenShiftVersionProvider creates telemetry data provider that will query the
-// configured k8s cluster - using the provided client - to get cluster k8s version.
+// NewOpenShiftVersionProvider provides the OpenShift version, or nothing if the cluster is not OpenShift.
 func NewOpenShiftVersionProvider(name string, kc kubernetes.Interface) (Provider, error) {
 	return NewK8sClientGoBase(name, OpenShiftVersionKind, kc, openShiftVersionReport)
 }
 
-// openShiftVersionReport prepares a report that indicates the OpenShift version.
+// openShiftVersionReport prepares a report that indicates the OpenShift version. It is empty on non-OpenShift clusters.
 func openShiftVersionReport(ctx context.Context, kc kubernetes.Interface) (types.ProviderReport, error) {
 	version, found := detectOpenShiftVersion(ctx, kc)
 	if !found {
