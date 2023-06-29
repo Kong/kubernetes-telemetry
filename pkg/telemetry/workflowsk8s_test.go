@@ -27,6 +27,10 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
 
+const (
+	exampleOpenShiftVersion = "4.13.0"
+)
+
 func TestWorkflowIdentifyPlatform(t *testing.T) {
 	t.Run("basic construction fail for nil kubernetes.Interface", func(t *testing.T) {
 		_, err := NewIdentifyPlatformWorkflow(nil)
@@ -51,10 +55,64 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 			provider.ClusterProviderKey:      provider.ClusterProviderUnknown,
 		}, r)
 
+		// this test does not provide an OpenShift operator Pod to the fake client, so the report should omit this key
+		_, hasOpenShiftKey := r[provider.OpenShiftVersionKey]
+		require.False(t, hasOpenShiftKey)
+
 		b, err := json.Marshal(r)
 		require.NoError(t, err)
 		fmt.Printf("%s\n", b)
 	})
+
+	t.Run("OpenShift version detection returns version when OpenShift operators are present", func(t *testing.T) {
+		kc := clientgo_fake.NewSimpleClientset(generateOpenShiftObjects()...)
+
+		w, err := NewIdentifyPlatformWorkflow(kc)
+		require.NoError(t, err)
+		require.NotNil(t, w)
+
+		r, err := w.Execute(context.Background())
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		require.EqualValues(t, exampleOpenShiftVersion, r[provider.OpenShiftVersionKey])
+
+		b, err := json.Marshal(r)
+		require.NoError(t, err)
+		fmt.Printf("%s\n", b)
+	})
+}
+
+func generateOpenShiftObjects() []k8sruntime.Object {
+	return []k8sruntime.Object{
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: provider.OpenShiftVersionPodNamespace,
+			},
+			Spec: corev1.NamespaceSpec{},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: provider.OpenShiftVersionPodNamespace,
+				Name:      provider.OpenShiftVersionPodApp + "-85c4c6dbb7-zbrkm",
+				Labels: map[string]string{
+					"app": provider.OpenShiftVersionPodApp,
+				},
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "worker",
+						Env: []corev1.EnvVar{
+							{
+								Name:  provider.ImageVersionVariable,
+								Value: exampleOpenShiftVersion,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func TestWorkflowClusterState(t *testing.T) {

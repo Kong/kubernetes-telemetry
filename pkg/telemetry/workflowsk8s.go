@@ -27,6 +27,7 @@ const (
 //	  "k8sv": "v1.24.1-gke.1400",
 //	  "k8sv_semver": "v1.24.1",
 //	  "k8s_provider": "GKE"
+//	  "openshift_version": "4.13.0"
 //	}
 func NewIdentifyPlatformWorkflow(kc kubernetes.Interface) (Workflow, error) {
 	if kc == nil {
@@ -47,11 +48,16 @@ func NewIdentifyPlatformWorkflow(kc kubernetes.Interface) (Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
+	pOpenShiftVersionProvider, err := provider.NewOpenShiftVersionProvider(string(provider.OpenShiftVersionKey), kc)
+	if err != nil {
+		return nil, err
+	}
 
 	w := NewWorkflow(IdentifyPlatformWorkflowName)
 	w.AddProvider(pClusterArch)
 	w.AddProvider(pClusterVersion)
 	w.AddProvider(pClusterProvider)
+	w.AddProvider(pOpenShiftVersionProvider)
 
 	return w, nil
 }
