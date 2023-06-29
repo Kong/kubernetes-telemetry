@@ -37,11 +37,9 @@ func NewOpenShiftVersionProvider(name string, kc kubernetes.Interface) (Provider
 
 // openShiftVersionReport prepares a report that indicates the OpenShift version.
 func openShiftVersionReport(ctx context.Context, kc kubernetes.Interface) (types.ProviderReport, error) {
-	r := make(types.ProviderReport)
-
 	version, found := detectOpenShiftVersion(ctx, kc)
 	if !found {
-		return r, nil
+		return types.ProviderReport{}, nil
 	}
 	return osVersionReport(version), nil
 }
@@ -50,8 +48,10 @@ func openShiftVersionReport(ctx context.Context, kc kubernetes.Interface) (types
 // It returns the version (which may be empty) and a boolean indicating if the Pod was found at all. If it didn't find
 // the Pod, it's probably not OpenShift.
 func detectOpenShiftVersion(ctx context.Context, kc kubernetes.Interface) (semver.Version, bool) {
-	var pods []corev1.Pod
-	cont := ""
+	var (
+		pods []corev1.Pod
+		cont string
+	)
 	for {
 		list, err := kc.CoreV1().Pods(OpenShiftVersionPodNamespace).List(ctx, metav1.ListOptions{Continue: cont})
 		if err != nil {
