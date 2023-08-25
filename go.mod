@@ -11,7 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 	k8s.io/apimachinery v0.28.1
-	k8s.io/client-go v0.28.0
+	k8s.io/client-go v0.28.1
 	sigs.k8s.io/controller-runtime v0.16.0
 )
 
