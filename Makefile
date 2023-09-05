@@ -23,6 +23,10 @@ gotestfmt: ## Download gotestfmt locally if necessary.
 # Build & Tests
 # ------------------------------------------------------------------------------
 
+.PHONY: verify.diff
+verify.diff:
+	@./scripts/verify-diff.sh
+
 .PHONY: lint
 lint: golangci-lint
 	$(GOLANGCI_LINT) run -v
