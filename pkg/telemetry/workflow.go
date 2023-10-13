@@ -64,6 +64,7 @@ func (w *workflow) Execute(ctx context.Context) (types.ProviderReport, error) {
 		wp       = workerpool.New(w.concurrency)
 		wg       sync.WaitGroup
 	)
+	defer wp.Stop()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
