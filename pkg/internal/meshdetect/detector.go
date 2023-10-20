@@ -234,7 +234,7 @@ func isPodSidecarInjected(meshKind MeshKind, pod *corev1.Pod) bool {
 	}
 	for _, container := range pod.Spec.Containers {
 		if container.Name == sidecarName {
-			switch meshKind { //nolint:exhaustive
+			switch meshKind {
 			case MeshKindAWSAppMesh:
 				// special judgement for AWS appmesh here:
 				// AWS appmesh uses `envoy` as sidecar name, which is a very common name.
