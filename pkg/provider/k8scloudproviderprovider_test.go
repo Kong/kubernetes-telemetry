@@ -277,6 +277,68 @@ func TestClusterProvider(t *testing.T) {
 			},
 			expected: ClusterProviderKubernetesInDocker,
 		},
+		// k3s
+		{
+			name: "k3s gets inferred from provider ID prefix",
+			clientFunc: func() *clientgo_fake.Clientset {
+				return clientgo_fake.NewSimpleClientset(
+					&corev1.Node{
+						Spec: corev1.NodeSpec{
+							ProviderID: "k3s://orbstack",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"beta.kubernetes.io/arch":               "arm64",
+								"beta.kubernetes.io/os":                 "linux",
+								"kubernetes.io/arch":                    "arm64",
+								"kubernetes.io/hostname":                "orbstack",
+								"kubernetes.io/os":                      "linux",
+								"node-role.kubernetes.io/control-plane": "",
+							},
+						},
+					},
+				)
+			},
+			expected: ClusterProviderK3S,
+		},
+		{
+			name: "k3s gets inferred from annotations",
+			clientFunc: func() *clientgo_fake.Clientset {
+				return clientgo_fake.NewSimpleClientset(
+					&corev1.Node{
+						Spec: corev1.NodeSpec{
+							ProviderID: "k3s://orbstack",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								"flannel.alpha.coreos.com/backend-data":                  "null",
+								"flannel.alpha.coreos.com/backend-type":                  "host-gw",
+								"flannel.alpha.coreos.com/backend-v6-data":               "null",
+								"flannel.alpha.coreos.com/kube-subnet-manager":           "true",
+								"flannel.alpha.coreos.com/public-ip":                     "198.19.249.2",
+								"flannel.alpha.coreos.com/public-ipv6":                   "fd07:b51a:cc66::2",
+								"k3s.io/hostname":                                        "orbstack",
+								"k3s.io/internal-ip":                                     "198.19.249.2,fd07:b51a:cc66::2",
+								"k3s.io/node-args":                                       `["server","--disable","metrics-server,traefik,coredns","--https-listen-port","26443","--lb-server-port","26444","--docker","--container-runtime-endpoint","/var/run/docker.sock","--protect-kernel-defaults","--flannel-backend","host-gw","--cluster-cidr","192.168.194.0/25,fd07:b51a:cc66:a::/72","--service-cidr","192.168.194.128/25,fd07:b51a:cc66:a:8000::/112","--kube-controller-manager-arg","node-cidr-mask-size-ipv4=25","--kube-controller-manager-arg","node-cidr-mask-size-ipv6=72","--write-kubeconfig","/run/kubeconfig.yml"]`,
+								"k3s.io/node-config-hash":                                "sjrlvsvk5fwsmiduwp6tm23ofcbjl3t4qk4p3sozvzjpzaefar2a====",
+								"k3s.io/node-env":                                        `{"k3s_data_dir"":/var/lib/rancher/k3s/data/8f922a49dfab9ed75d85cba9b81b9ac7f20a633da393551392030e41ea4d569b"}`,
+								"node.alpha.kubernetes.io/ttl":                           "0",
+								"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+							},
+							Labels: map[string]string{
+								"beta.kubernetes.io/arch":               "arm64",
+								"beta.kubernetes.io/os":                 "linux",
+								"kubernetes.io/arch":                    "arm64",
+								"kubernetes.io/hostname":                "orbstack",
+								"kubernetes.io/os":                      "linux",
+								"node-role.kubernetes.io/control-plane": "",
+							},
+						},
+					},
+				)
+			},
+			expected: ClusterProviderK3S,
+		},
 	}
 
 	for _, tc := range testcases {
