@@ -28,6 +28,8 @@ const (
 	ClusterProviderAWS = ClusterProvider("AWS")
 	// ClusterProviderKubernetesInDocker identifies kind (kubernetes in docker) as cluster provider.
 	ClusterProviderKubernetesInDocker = ClusterProvider("kind")
+	// ClusterProviderK3S identifies k3s cluster provider.
+	ClusterProviderK3S = ClusterProvider("k3s")
 	// ClusterProviderUnknown represents an unknown cluster provider.
 	ClusterProviderUnknown = ClusterProvider("UNKNOWN")
 )
@@ -123,7 +125,9 @@ func getClusterProviderFromNodesProviderID(nodeList *corev1.NodeList) (ClusterPr
 		providerIDPrefixGKE  = "gce"
 		providerIDPrefixAWS  = "aws"
 		providerIDPrefixKind = "kind"
+		providerIDPrefixK3s  = "k3s"
 	)
+
 	d := make(clusterProviderDistribution)
 	for _, n := range nodeList.Items {
 		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixGKE) {
@@ -136,6 +140,10 @@ func getClusterProviderFromNodesProviderID(nodeList *corev1.NodeList) (ClusterPr
 		}
 		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixKind) {
 			d[ClusterProviderKubernetesInDocker]++
+			continue
+		}
+		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixK3s) {
+			d[ClusterProviderK3S]++
 			continue
 		}
 	}
@@ -164,12 +172,16 @@ func getMostCommonClusterProviderFromDistribution(d clusterProviderDistribution)
 }
 
 func getClusterProviderFromAnnotations(annotations map[string]string) (ClusterProvider, bool) {
-	const (
-		annotationNameGKEInstanceID = "container.googleapis.com/instance_id"
-	)
-
 	annotationsGKE := map[string]struct{}{
-		annotationNameGKEInstanceID: {},
+		"container.googleapis.com/instance_id": {},
+	}
+
+	annotationsK3S := map[string]struct{}{
+		"k3s.io/hostname":         {},
+		"k3s.io/internal-ip":      {},
+		"k3s.io/node-args":        {},
+		"k3s.io/node-config-hash": {},
+		"k3s.io/node-env":         {},
 	}
 
 	// This approach currently loops through the provided annotations and checks
@@ -180,6 +192,9 @@ func getClusterProviderFromAnnotations(annotations map[string]string) (ClusterPr
 	for aName := range annotations {
 		if _, ok := annotationsGKE[aName]; ok {
 			return ClusterProviderGKE, true
+		}
+		if _, ok := annotationsK3S[aName]; ok {
+			return ClusterProviderK3S, true
 		}
 	}
 
