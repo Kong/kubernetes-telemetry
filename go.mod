@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/puzpuzpuz/xsync/v2 v2.5.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	k8s.io/apimachinery v0.29.2
 	k8s.io/client-go v0.29.2
 	sigs.k8s.io/controller-runtime v0.17.2
