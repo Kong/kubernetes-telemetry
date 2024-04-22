@@ -12,6 +12,7 @@ linters:
   - exportloopref
   - forbidigo
   - gci
+  - gocritic
   - godot
   - gofmt
   - gofumpt
@@ -89,11 +90,11 @@ linters-settings:
           recommendations:
           - sigs.k8s.io/yaml
       - github.com/pkg/errors:
-          recommenddations:
+          recommendations:
           - fmt
           - errors
       - golang.org/x/net/context:
-          recommenddations:
+          recommendations:
           - context
 issues:
   fix: true
