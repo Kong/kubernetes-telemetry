@@ -172,8 +172,8 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 
 func TestManagerWithCatalogWorkflows(t *testing.T) {
 	t.Run("identify platform and cluster state", func(t *testing.T) {
-		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
-		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.Install(scheme.Scheme))
 
 		objs := []k8sruntime.Object{
 			&corev1.Pod{
