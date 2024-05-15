@@ -12,7 +12,7 @@ require (
 	github.com/puzpuzpuz/xsync/v2 v2.5.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
-	k8s.io/apimachinery v0.30.0
+	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.0
 	sigs.k8s.io/controller-runtime v0.18.2
 )
