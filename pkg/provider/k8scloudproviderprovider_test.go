@@ -339,6 +339,56 @@ func TestClusterProvider(t *testing.T) {
 			},
 			expected: ClusterProviderK3S,
 		},
+		{
+			name: "Azure node inferred from node labels",
+			clientFunc: func() *clientgo_fake.Clientset {
+				return clientgo_fake.NewSimpleClientset(
+					&corev1.Node{
+						Spec: corev1.NodeSpec{
+							ProviderID: "azure:///subscriptions/1111111-422b-9a21-fd111111111/resourceGroups/mc_asd_asd_eucentral/providers/Microsoft.Compute/virtualMachineScaleSets/aks-nodepool1-1111-vmss/virtualMachines/0",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								"csi.volume.kubernetes.io/nodeid":                        `{"disk.csi.azure.com":"aks-nodepool1-20479306-vmss000000","file.csi.azure.com":"aks-nodepool1-20479306-vmss000000"}`,
+								"node.alpha.kubernetes.io/ttl":                           "0",
+								"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+							},
+							Labels: map[string]string{
+								"agentpool":                                               "nodepool1",
+								"beta.kubernetes.io/arch":                                 "amd64",
+								"beta.kubernetes.io/instance-type":                        "Standard_DS2_v2",
+								"beta.kubernetes.io/os":                                   "linux",
+								"failure-domain.beta.kubernetes.io/region":                "polandcentral",
+								"failure-domain.beta.kubernetes.io/zone":                  "0",
+								"kubernetes.azure.com/agentpool":                          "nodepool1",
+								"kubernetes.azure.com/cluster":                            "MC_asd_asd_eucentral",
+								"kubernetes.azure.com/consolidated-additional-properties": "6ea4bf17-2fb7-11ef-ac0b-fd1111111111",
+								"kubernetes.azure.com/kubelet-identity-client-id":         "42e89310-1d30-43fd-8888-fd1111111111",
+								"kubernetes.azure.com/mode":                               "system",
+								"kubernetes.azure.com/node-image-version":                 "AKSUbuntu-2204gen2containerd-202405.27.0",
+								"kubernetes.azure.com/nodepool-type":                      "VirtualMachineScaleSets",
+								"kubernetes.azure.com/os-sku":                             "Ubuntu",
+								"kubernetes.azure.com/role":                               "agent",
+								"kubernetes.azure.com/storageprofile":                     "managed",
+								"kubernetes.azure.com/storagetier":                        "Premium_LRS",
+								"kubernetes.io/arch":                                      "amd64",
+								"kubernetes.io/hostname":                                  "aks-nodepool1-111111111-vmss000000",
+								"kubernetes.io/os":                                        "linux",
+								"kubernetes.io/role":                                      "agent",
+								"node-role.kubernetes.io/agent":                           "",
+								"node.kubernetes.io/instance-type":                        "Standard_DS2_v2",
+								"storageprofile":                                          "managed",
+								"storagetier":                                             "Premium_LRS",
+								"topology.disk.csi.azure.com/zone":                        "",
+								"topology.kubernetes.io/region":                           "polandcentral",
+								"topology.kubernetes.io/zone":                             "0",
+							},
+						},
+					},
+				)
+			},
+			expected: ClusterProviderAzure,
+		},
 	}
 
 	for _, tc := range testcases {

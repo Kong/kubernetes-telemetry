@@ -24,6 +24,8 @@ type ClusterProvider string
 const (
 	// ClusterProviderGKE identifies Google's GKE cluster provider.
 	ClusterProviderGKE = ClusterProvider("GKE")
+	// ClusterProviderAzure identifies Microsoft's Azure cluster provider.
+	ClusterProviderAzure = ClusterProvider("Azure")
 	// ClusterProviderAWS identifies Amazon's AWS cluster provider.
 	ClusterProviderAWS = ClusterProvider("AWS")
 	// ClusterProviderKubernetesInDocker identifies kind (kubernetes in docker) as cluster provider.
@@ -122,16 +124,21 @@ func getClusterProviderFromNodes(nodeList *corev1.NodeList) (ClusterProvider, bo
 func getClusterProviderFromNodesProviderID(nodeList *corev1.NodeList) (ClusterProvider, bool) {
 	const (
 		// Nodes on GKE are provided by GCE (Google Compute Engine)
-		providerIDPrefixGKE  = "gce"
-		providerIDPrefixAWS  = "aws"
-		providerIDPrefixKind = "kind"
-		providerIDPrefixK3s  = "k3s"
+		providerIDPrefixGKE   = "gce"
+		providerIDPrefixAWS   = "aws"
+		providerIDPrefixKind  = "kind"
+		providerIDPrefixK3s   = "k3s"
+		providerIDPrefixAzure = "azure"
 	)
 
 	d := make(clusterProviderDistribution)
 	for _, n := range nodeList.Items {
 		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixGKE) {
 			d[ClusterProviderGKE]++
+			continue
+		}
+		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixAzure) {
+			d[ClusterProviderAzure]++
 			continue
 		}
 		if strings.HasPrefix(n.Spec.ProviderID, providerIDPrefixAWS) {
@@ -212,6 +219,20 @@ func getClusterProviderFromLabels(labels map[string]string) (ClusterProvider, bo
 		labelNameAWSInstanceID:  {},
 	}
 
+	const (
+		labelNameAzureClusterName      = "kubernetes.azure.com/cluster"
+		labelNameAzureOSSKU            = "kubernetes.azure.com/os-sku"
+		labelNameAzureRole             = "kubernetes.azure.com/role"
+		labelNameAzureNodeImageVersion = "kubernetes.azure.com/node-image-version"
+	)
+
+	labelsAzure := map[string]struct{}{
+		labelNameAzureClusterName:      {},
+		labelNameAzureOSSKU:            {},
+		labelNameAzureRole:             {},
+		labelNameAzureNodeImageVersion: {},
+	}
+
 	// This approach currently loops through the provided labels and checks
 	// each of them against known labels sets for particular cluster providers.
 	// The reason for this is that regardless of the number of cluster providers
@@ -220,6 +241,9 @@ func getClusterProviderFromLabels(labels map[string]string) (ClusterProvider, bo
 	for lName := range labels {
 		if _, ok := labelsAWS[lName]; ok {
 			return ClusterProviderAWS, true
+		}
+		if _, ok := labelsAzure[lName]; ok {
+			return ClusterProviderAzure, true
 		}
 	}
 
