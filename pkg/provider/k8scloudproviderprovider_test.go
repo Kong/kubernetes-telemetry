@@ -389,6 +389,38 @@ func TestClusterProvider(t *testing.T) {
 			},
 			expected: ClusterProviderAzure,
 		},
+		{
+			name: "Rancher node inferred from version",
+			clientFunc: func() *clientgo_fake.Clientset {
+				kc := clientgo_fake.NewSimpleClientset(
+					&corev1.Node{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								"node.alpha.kubernetes.io/ttl":                           "0",
+								"volumes.kubernetes.io/controller-managed-attach-detach": "true",
+							},
+						},
+					},
+				)
+
+				d, ok := kc.Discovery().(*fakediscovery.FakeDiscovery)
+				require.True(t, ok)
+				d.FakedServerVersion = &version.Info{
+					Major:        "1",
+					Minor:        "27+",
+					GitVersion:   "v1.27.8+rke2r1",
+					GitCommit:    "cc6a1b4915a99f49f5510ef0667f94b9ca832a8a",
+					GitTreeState: "clean",
+					BuildDate:    "2024-03-09T18:24:04Z",
+					GoVersion:    "go1.21.15",
+					Compiler:     "gc",
+					Platform:     "linux/amd64",
+				}
+
+				return kc
+			},
+			expected: ClusterProviderRKE2,
+		},
 	}
 
 	for _, tc := range testcases {
