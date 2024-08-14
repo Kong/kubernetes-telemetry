@@ -32,6 +32,8 @@ const (
 	ClusterProviderKubernetesInDocker = ClusterProvider("kind")
 	// ClusterProviderK3S identifies k3s cluster provider.
 	ClusterProviderK3S = ClusterProvider("k3s")
+	// ClusterProviderRKE2 identifies RKE2 cluster provider.
+	ClusterProviderRKE2 = ClusterProvider("rke2")
 	// ClusterProviderUnknown represents an unknown cluster provider.
 	ClusterProviderUnknown = ClusterProvider("UNKNOWN")
 )
@@ -82,8 +84,9 @@ func clusterProviderReport(ctx context.Context, kc kubernetes.Interface) (types.
 // the version string as returned by the /version API.
 func getClusterProviderFromVersion(version string) (ClusterProvider, bool) {
 	const (
-		versionSubstringGKE = "gke"
-		versionSubstringEKS = "eks"
+		versionSubstringGKE  = "gke"
+		versionSubstringEKS  = "eks"
+		versionSubstringRKE2 = "rke2"
 	)
 
 	if strings.Contains(version, versionSubstringGKE) {
@@ -91,6 +94,9 @@ func getClusterProviderFromVersion(version string) (ClusterProvider, bool) {
 	}
 	if strings.Contains(version, versionSubstringEKS) {
 		return ClusterProviderAWS, true
+	}
+	if strings.Contains(version, versionSubstringRKE2) {
+		return ClusterProviderRKE2, true
 	}
 
 	return ClusterProviderUnknown, false
