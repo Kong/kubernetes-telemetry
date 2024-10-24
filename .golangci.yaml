@@ -6,10 +6,10 @@ linters:
   - bodyclose
   - dogsled
   - durationcheck
+  - copyloopvar
   - errcheck
   - errorlint
   - exhaustive
-  - exportloopref
   - forbidigo
   - gci
   - gocritic
@@ -17,14 +17,14 @@ linters:
   - gofmt
   - gofumpt
   - goimports
-  - gomnd
   - gomodguard
   - gosec
+  - gosimple
   - govet
   - importas
   - ineffassign
-  - megacheck
   - misspell
+  - mnd
   - nakedret
   - nilerr
   - nolintlint
@@ -39,7 +39,7 @@ linters:
 linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
-  gomnd:
+  mnd:
     ignored-numbers:
     - '2'
   gci:

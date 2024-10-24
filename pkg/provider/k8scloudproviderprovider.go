@@ -170,15 +170,15 @@ func getClusterProviderFromNodesProviderID(nodeList *corev1.NodeList) (ClusterPr
 // cluster provider from the provided cluster provider distribution.
 func getMostCommonClusterProviderFromDistribution(d clusterProviderDistribution) (ClusterProvider, bool) {
 	var (
-		top   = ClusterProviderUnknown
-		found = false
-		max   = 0
+		top     = ClusterProviderUnknown
+		found   = false
+		maximum = 0
 	)
 	for k, v := range d {
-		if v > max {
+		if v > maximum {
 			top = k
 			found = true
-			max = v
+			maximum = v
 		}
 	}
 	return top, found
