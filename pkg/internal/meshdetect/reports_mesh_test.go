@@ -57,7 +57,6 @@ func TestMeshDeploymentResultsToProviderReport(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.caseName, func(t *testing.T) {
 			report := tc.results.ToProviderReport()
 			require.Equal(t, tc.expected, report)

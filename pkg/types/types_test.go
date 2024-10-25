@@ -42,7 +42,6 @@ func TestReport(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			tc.r1.Merge(tc.r2)
 			require.EqualValues(t, tc.expected, tc.r1)

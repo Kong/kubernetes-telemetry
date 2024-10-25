@@ -311,11 +311,9 @@ func TestDetectRunUnder(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.caseName, func(t *testing.T) {
-			c := b.Build()
 			d := &Detector{
-				Client: c,
+				Client: b.Build(),
 				Pod:    tc.pod,
 				PublishService: apitypes.NamespacedName{
 					Namespace: tc.pod.Namespace,

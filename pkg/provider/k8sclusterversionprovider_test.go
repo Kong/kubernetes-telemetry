@@ -101,7 +101,6 @@ func TestClusterVersion(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			p, err := NewK8sClusterVersionProvider(tc.name, tc.clientFunc())
 			require.NoError(t, err)
