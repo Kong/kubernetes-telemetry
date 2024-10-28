@@ -19,6 +19,7 @@ import (
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -172,6 +173,7 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 
 func TestManagerWithCatalogWorkflows(t *testing.T) {
 	t.Run("identify platform and cluster state", func(t *testing.T) {
+		require.NoError(t, gatewayv1.Install(scheme.Scheme))
 		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
 		require.NoError(t, gatewayv1alpha2.Install(scheme.Scheme))
 
