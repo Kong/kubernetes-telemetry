@@ -22,7 +22,7 @@ const (
 func NewK8sGatewayCountProvider(name string, d dynamic.Interface, rm meta.RESTMapper) (Provider, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "gateway.networking.k8s.io",
-		Version:  "v1beta1",
+		Version:  "v1",
 		Resource: "gateways",
 	}
 	return NewK8sObjectCountProviderWithRESTMapper(name, GatewayCountKind, d, gvr, rm)

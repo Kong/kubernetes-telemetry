@@ -20,6 +20,7 @@ import (
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -122,6 +123,7 @@ func TestWorkflowClusterState(t *testing.T) {
 	})
 
 	t.Run("properly reports cluster state", func(t *testing.T) {
+		require.NoError(t, gatewayv1.Install(scheme.Scheme))
 		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
 		require.NoError(t, gatewayv1alpha2.Install(scheme.Scheme))
 
@@ -152,19 +154,19 @@ func TestWorkflowClusterState(t *testing.T) {
 					Name:      "srv",
 				},
 			},
-			&gatewayv1beta1.GatewayClass{
+			&gatewayv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
 					Name:      "gatewayclass-1",
 				},
 			},
-			&gatewayv1beta1.Gateway{
+			&gatewayv1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
 					Name:      "gateway-1",
 				},
 			},
-			&gatewayv1beta1.HTTPRoute{
+			&gatewayv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
 					Name:      "httproute-1",
@@ -176,7 +178,7 @@ func TestWorkflowClusterState(t *testing.T) {
 					Name:      "referencegrant-1",
 				},
 			},
-			&gatewayv1alpha2.GRPCRoute{
+			&gatewayv1.GRPCRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
 					Name:      "grpcroute-1",
@@ -272,11 +274,11 @@ func TestWorkflowClusterState(t *testing.T) {
 				meta.RESTScopeRoot,
 			)
 		}
-		as(gatewayv1beta1.GroupVersion, "GatewayClass", "gatewayclasses")
-		as(gatewayv1beta1.GroupVersion, "Gateway", "gateways")
-		as(gatewayv1beta1.GroupVersion, "HTTPRoute", "httproutes")
+		as(gatewayv1.GroupVersion, "GatewayClass", "gatewayclasses")
+		as(gatewayv1.GroupVersion, "Gateway", "gateways")
+		as(gatewayv1.GroupVersion, "HTTPRoute", "httproutes")
+		as(gatewayv1.GroupVersion, "GRPCRoute", "grpcroutes")
 		as(gatewayv1beta1.GroupVersion, "ReferenceGrant", "referencegrants")
-		as(gatewayv1alpha2.GroupVersion, "GRPCRoute", "grpcroutes")
 		as(gatewayv1alpha2.GroupVersion, "TCPRoute", "tcproutes")
 		as(gatewayv1alpha2.GroupVersion, "UDPRoute", "udproutes")
 		as(gatewayv1alpha2.GroupVersion, "TLSRoute", "tlsroutes")
@@ -293,7 +295,7 @@ func TestWorkflowClusterState(t *testing.T) {
 			map[schema.GroupVersionResource]string{
 				{
 					Group:    "gateway.networking.k8s.io",
-					Version:  "v1beta1",
+					Version:  "v1",
 					Resource: "gateways",
 				}: "GatewayList",
 			},
@@ -312,17 +314,17 @@ func TestWorkflowClusterState(t *testing.T) {
 			provider.NodeCountKey:    2,
 			provider.PodCountKey:     1,
 			provider.ServiceCountKey: 2,
-			// gateway.networking.k8s.io v1beta1
+			// gateway.networking.k8s.io v1
+			provider.GRPCRouteCountKey:    1,
+			provider.HTTPRouteCountKey:    1,
 			provider.GatewayClassCountKey: 1,
-			// This should be equal to 1 but see above for comment explaining the issue.
-			provider.GatewayCountKey:        0,
-			provider.HTTPRouteCountKey:      1,
+			provider.GatewayCountKey:      0, // This should be equal to 1 but see above for comment explaining the issue.
+			// gateway.networking.k8s.io v1beta1
 			provider.ReferenceGrantCountKey: 1,
 			// gateway.networking.k8s.io v1alpha2
-			provider.GRPCRouteCountKey: 1,
-			provider.TCPRouteCountKey:  1,
-			provider.UDPRouteCountKey:  1,
-			provider.TLSRouteCountKey:  1,
+			provider.TCPRouteCountKey: 1,
+			provider.UDPRouteCountKey: 1,
+			provider.TLSRouteCountKey: 1,
 		}, r)
 	})
 
