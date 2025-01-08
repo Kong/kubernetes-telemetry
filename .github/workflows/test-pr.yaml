@@ -65,7 +65,7 @@ jobs:
         go-version-file: go.mod
 
     - name: Set up gotestfmt
-      uses: GoTestTools/gotestfmt-action@v2
+      uses: GoTestTools/gotestfmt-action@7dd37bbcc925453b6d7465164cf3bcbd87bc691d # v2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
