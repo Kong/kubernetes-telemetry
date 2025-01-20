@@ -12,7 +12,7 @@ on:
 
 jobs:
   check-go-mod:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: 10
     name: Check Go modules
     runs-on: ubuntu-latest
     steps:
@@ -32,7 +32,7 @@ jobs:
       run: make verify.diff
 
   lint:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: 10
     name: Lint
     runs-on: ubuntu-latest
     steps:
@@ -50,7 +50,7 @@ jobs:
       run: make lint
 
   unit-test:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    timeout-minutes: 10
     name: Test
     runs-on: ubuntu-latest
     steps:
