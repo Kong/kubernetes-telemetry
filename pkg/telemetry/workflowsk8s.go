@@ -103,6 +103,10 @@ func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow,
 			provider.PodCountKey,
 		},
 		{
+			provider.NewK8sIngressCountProvider,
+			provider.IngressCountKey,
+		},
+		{
 			provider.NewK8sServiceCountProvider,
 			provider.ServiceCountKey,
 		},
