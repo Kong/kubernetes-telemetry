@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -202,6 +203,12 @@ func TestWorkflowClusterState(t *testing.T) {
 					Name:      "tlsroute-1",
 				},
 			},
+			&netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "ingress-1",
+				},
+			},
 			&corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -314,6 +321,8 @@ func TestWorkflowClusterState(t *testing.T) {
 			provider.NodeCountKey:    2,
 			provider.PodCountKey:     1,
 			provider.ServiceCountKey: 2,
+			// networking.k8s.io v1
+			provider.IngressCountKey: 1,
 			// gateway.networking.k8s.io v1
 			provider.GRPCRouteCountKey:    1,
 			provider.HTTPRouteCountKey:    1,
@@ -354,6 +363,12 @@ func TestWorkflowClusterState(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "namespace2",
 					Name:      "srv",
+				},
+			},
+			&netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "ingress-1",
 				},
 			},
 			&corev1.Node{
@@ -429,6 +444,8 @@ func TestWorkflowClusterState(t *testing.T) {
 			provider.NodeCountKey:    2,
 			provider.PodCountKey:     1,
 			provider.ServiceCountKey: 2,
+			// networking.k8s.io
+			provider.IngressCountKey: 1,
 			// gateway.networking.k8s.io
 			// No Gateway API related objects are reported and also no error is returned.
 		}, r)

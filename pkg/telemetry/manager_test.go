@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	dyn_fake "k8s.io/client-go/dynamic/fake"
@@ -204,6 +205,12 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 					Name:      "srv",
 				},
 			},
+			&netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "ingress-1",
+				},
+			},
 			&corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -263,9 +270,10 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 			types.SignalReport{
 				Report: types.Report{
 					"cluster-state": types.ProviderReport{
-						"k8s_nodes_count":    1,
-						"k8s_pods_count":     1,
-						"k8s_services_count": 2,
+						"k8s_nodes_count":     1,
+						"k8s_pods_count":      1,
+						"k8s_services_count":  2,
+						"k8s_ingresses_count": 1,
 						// TODO: Even though we added Gateway API's schema to schema.Scheme, the below count providers
 						// don't detect they properly due to https://github.com/kubernetes/kubernetes/pull/110053.
 						// When that's addressed we should revisit this test and adjust test to check for
@@ -319,6 +327,12 @@ func TestManagerTriggerExecute(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "namespace2",
 					Name:      "srv",
+				},
+			},
+			&netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "ingress-1",
 				},
 			},
 			&corev1.Node{
@@ -378,7 +392,7 @@ func TestManagerTriggerExecute(t *testing.T) {
 
 		arch := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 		require.EqualValues(t,
-			fmt.Sprintf("<14>signal=ping;k8s_arch=%s;k8s_provider=AWS;k8sv=v0.0.0-master+$Format:%%H$;k8sv_semver=v0.0.0;k8s_nodes_count=1;k8s_pods_count=1;k8s_services_count=2;\n", arch),
+			fmt.Sprintf("<14>signal=ping;k8s_arch=%s;k8s_provider=AWS;k8sv=v0.0.0-master+$Format:%%H$;k8sv_semver=v0.0.0;k8s_ingresses_count=1;k8s_nodes_count=1;k8s_pods_count=1;k8s_services_count=2;\n", arch),
 			string(report),
 		)
 	})
