@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -465,4 +466,57 @@ func TestManagerWithMultilpleWorkflowsOneReturningError(t *testing.T) {
 		},
 		report,
 	)
+}
+
+func TestManagerNoGoroutineLeak(t *testing.T) {
+	t.Cleanup(func() {
+		t.Logf("Checking goroutine leak")
+		// Verify that all goroutines started by the manager have been closed.
+		goleak.VerifyNone(t)
+	})
+
+	m, err := NewManager(
+		"dummy-signal",
+		OptManagerLogger(logr.Discard()),
+		OptManagerPeriod(time.Millisecond),
+	)
+	require.NoError(t, err)
+
+	{
+		w := NewWorkflow("basic1")
+		{
+			p, err := provider.NewFixedValueProvider("constant1", types.ProviderReport{
+				"constant1": "value1",
+			})
+			require.NoError(t, err)
+			w.AddProvider(p)
+		}
+		{
+			p, err := provider.NewFixedValueProvider("constant2", types.ProviderReport{
+				"constant2": "value2",
+			})
+			require.NoError(t, err)
+			w.AddProvider(p)
+		}
+
+		m.AddWorkflow(w)
+	}
+
+	consumer1 := NewConsumer(serializers.NewSemicolonDelimited(), forwarders.NewDiscardForwarder())
+	consumer2 := NewConsumer(serializers.NewSemicolonDelimited(), forwarders.NewDiscardForwarder())
+
+	require.NoError(t, m.AddConsumer(consumer1))
+	require.NoError(t, m.AddConsumer(consumer2))
+	require.NoError(t, m.Start())
+	require.ErrorIs(t, m.Start(), ErrManagerAlreadyStarted,
+		"subsequent starts of the manager should return an error",
+	)
+
+	require.ErrorIs(t, m.AddConsumer(consumer1),
+		ErrCantAddConsumersAfterStart,
+		"cannot add consumers after start",
+	)
+
+	// Stop manager.
+	m.Stop()
 }
