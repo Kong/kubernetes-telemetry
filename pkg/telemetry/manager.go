@@ -51,7 +51,7 @@ type manager struct {
 
 	// consumers is a slice of channels that will consume reports produced by
 	// execution of workflows.
-	consumers []chan<- types.SignalReport
+	consumers []Consumer
 
 	chTrigger chan types.Signal
 	ch        chan types.SignalReport
@@ -100,7 +100,7 @@ func NewManager(signal types.Signal, opts ...OptManager) (Manager, error) {
 		signal:    signal,
 		workflows: xsync.NewMapOf[Workflow](),
 		period:    DefaultWorkflowTickPeriod,
-		consumers: []chan<- types.SignalReport{},
+		consumers: []Consumer{},
 		chTrigger: make(chan types.Signal),
 		ch:        make(chan types.SignalReport),
 		logger:    defaultLogger(),
@@ -141,6 +141,10 @@ func (m *manager) Start() error {
 func (m *manager) Stop() {
 	m.logger.Info("stopping telemetry manager")
 	m.once.Do(func() {
+		// Close all consumers.
+		for _, c := range m.consumers {
+			c.Close()
+		}
 		close(m.done)
 	})
 }
@@ -158,7 +162,7 @@ func (m *manager) AddConsumer(c Consumer) error {
 	if atomic.LoadInt32(&m.started) > 0 {
 		return ErrCantAddConsumersAfterStart
 	}
-	m.consumers = append(m.consumers, c.Intake())
+	m.consumers = append(m.consumers, c)
 	return nil
 }
 
@@ -270,7 +274,7 @@ func (m *manager) consumerLoop() {
 		consumersLoop:
 			for _, c := range m.consumers {
 				select {
-				case c <- r:
+				case c.Intake() <- r:
 				case <-m.done:
 					break consumersLoop
 				}
