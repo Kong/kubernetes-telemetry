@@ -77,7 +77,7 @@ jobs:
         go test -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt -hide successful-downloads,empty-packages -showteststatus
 
     - name: Upload test log
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: test-log
