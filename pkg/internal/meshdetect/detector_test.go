@@ -94,119 +94,122 @@ func TestDetectMeshDeployment(t *testing.T) {
 }
 
 func TestDetectRunUnder(t *testing.T) {
-	b := fake.NewClientBuilder()
-	b.WithObjects(
-		// add pod
-		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kong",
-				Name:      "kong-ingress-controller",
-				Annotations: map[string]string{
-					"sidecar.istio.io/status":  "injected",
-					"linkerd.io/proxy-version": "1.0.0",
-					"kuma.io/sidecar-injected": "true",
-				},
-			},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:  "ingress-controller",
-						Image: "kong/kubernetes-ingress-controller:2.4",
-					},
-					// sidecars
-					{Name: "istio-proxy"},
-					{Name: "kuma-sidecar"},
-					{
-						Name:  "envoy",
-						Image: "public.ecr.aws/appmesh/aws-appmesh-envoy:v1.22.2.0-prod",
+	clientBuilder := func() *fake.ClientBuilder {
+		b := fake.NewClientBuilder()
+		b.WithObjects(
+			// add pod
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "kong-ingress-controller",
+					Annotations: map[string]string{
+						"sidecar.istio.io/status":  "injected",
+						"linkerd.io/proxy-version": "1.0.0",
+						"kuma.io/sidecar-injected": "true",
 					},
 				},
-				// init containers.
-				InitContainers: []corev1.Container{
-					{Name: "istio-init"},
-				},
-			},
-		},
-		// add kong-proxy service.
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kong",
-				Name:      "kong-proxy",
-				Annotations: map[string]string{
-					"mesh.traefik.io/traffic-type": "HTTP",
-				},
-			},
-		},
-		// add another namespace.
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "kong-2",
-				Annotations: map[string]string{
-					"linkerd.io/inject": "enabled",
-				},
-				Labels: map[string]string{
-					"appmesh.k8s.aws/sidecarInjectorWebhook": "enabled",
-				},
-			},
-		},
-		// add another pod and kong-proxy service.
-		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kong-2",
-				Name:      "kong-ingress-controller",
-				Annotations: map[string]string{
-					"linkerd.io/proxy-version":                   "1.0.0",
-					"consul.hashicorp.com/connect-inject-status": "injected",
-				},
-			},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:  "ingress-controller",
-						Image: "kong/kubernetes-ingress-controller:2.4",
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "ingress-controller",
+							Image: "kong/kubernetes-ingress-controller:2.4",
+						},
+						// sidecars
+						{Name: "istio-proxy"},
+						{Name: "kuma-sidecar"},
+						{
+							Name:  "envoy",
+							Image: "public.ecr.aws/appmesh/aws-appmesh-envoy:v1.22.2.0-prod",
+						},
 					},
-					// sidecars
-					{Name: "linkerd-proxy"},
-					{Name: "envoy-sidecar"},
-				},
-				// init containers.
-				InitContainers: []corev1.Container{
-					{Name: "linkerd-init"},
-					{Name: "consul-connect-inject-init"},
-				},
-			},
-		},
-		// add a pod without a publishing service, and no injection.
-		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kong-3",
-				Name:      "kong-ingress-controller",
-			},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:  "ingress-controller",
-						Image: "kong/kubernetes-ingress-controller:2.4",
+					// init containers.
+					InitContainers: []corev1.Container{
+						{Name: "istio-init"},
 					},
 				},
 			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kong-2",
-				Name:      "kong-proxy",
-				Annotations: map[string]string{
-					"mesh.traefik.io/traffic-type": "UDP",
+			// add kong-proxy service.
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong",
+					Name:      "kong-proxy",
+					Annotations: map[string]string{
+						"mesh.traefik.io/traffic-type": "HTTP",
+					},
 				},
 			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "kong-3",
-				Name:      "kong-proxy",
+			// add another namespace.
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "kong-2",
+					Annotations: map[string]string{
+						"linkerd.io/inject": "enabled",
+					},
+					Labels: map[string]string{
+						"appmesh.k8s.aws/sidecarInjectorWebhook": "enabled",
+					},
+				},
 			},
-		},
-	)
+			// add another pod and kong-proxy service.
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong-2",
+					Name:      "kong-ingress-controller",
+					Annotations: map[string]string{
+						"linkerd.io/proxy-version":                   "1.0.0",
+						"consul.hashicorp.com/connect-inject-status": "injected",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "ingress-controller",
+							Image: "kong/kubernetes-ingress-controller:2.4",
+						},
+						// sidecars
+						{Name: "linkerd-proxy"},
+						{Name: "envoy-sidecar"},
+					},
+					// init containers.
+					InitContainers: []corev1.Container{
+						{Name: "linkerd-init"},
+						{Name: "consul-connect-inject-init"},
+					},
+				},
+			},
+			// add a pod without a publishing service, and no injection.
+			&corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong-3",
+					Name:      "kong-ingress-controller",
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "ingress-controller",
+							Image: "kong/kubernetes-ingress-controller:2.4",
+						},
+					},
+				},
+			},
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong-2",
+					Name:      "kong-proxy",
+					Annotations: map[string]string{
+						"mesh.traefik.io/traffic-type": "UDP",
+					},
+				},
+			},
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kong-3",
+					Name:      "kong-proxy",
+				},
+			},
+		)
+		return b
+	}
 
 	testCases := []struct {
 		caseName        string
@@ -313,7 +316,7 @@ func TestDetectRunUnder(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			d := &Detector{
-				Client: b.Build(),
+				Client: clientBuilder().Build(),
 				Pod:    tc.pod,
 				PublishService: apitypes.NamespacedName{
 					Namespace: tc.pod.Namespace,
