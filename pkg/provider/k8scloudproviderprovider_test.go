@@ -23,7 +23,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "no objects in the cluster return unknown cluster provider",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset()
+				return clientgo_fake.NewClientset()
 			},
 			expected: ClusterProviderUnknown,
 		},
@@ -31,7 +31,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "gke node (without correctly set provider ID, labels nor annotations) makes the provider return gke based on version string",
 			clientFunc: func() *clientgo_fake.Clientset {
-				kc := clientgo_fake.NewSimpleClientset(
+				kc := clientgo_fake.NewClientset(
 					&corev1.Node{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
@@ -62,7 +62,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "gke node makes the provider return gke provider as a result",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						Spec: corev1.NodeSpec{
 							ProviderID: "gce://k8s-playground/europe-north1-a/gke-cluster-user-default-pool-e123123123-aaii",
@@ -108,7 +108,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "gke node (without gco:// provider ID) makes the provider return gke based on labels and annotations",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
@@ -152,7 +152,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "aws node makes the provider return aws",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						Spec: corev1.NodeSpec{
 							ProviderID: "aws:///eu-west-1b/i-0fa11111111111111",
@@ -189,7 +189,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "aws node (without correctly set provider ID) makes the provider return aws based on labels",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
@@ -223,7 +223,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "aws node x(without correctly set provider ID, labels nor annotations) makes the provider return aws based on version string",
 			clientFunc: func() *clientgo_fake.Clientset {
-				kc := clientgo_fake.NewSimpleClientset(
+				kc := clientgo_fake.NewClientset(
 					&corev1.Node{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
@@ -256,7 +256,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "kind gets inferred from provider ID prefix",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						Spec: corev1.NodeSpec{
 							ProviderID: "kind://docker/kong/kong-control-plane",
@@ -281,7 +281,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "k3s gets inferred from provider ID prefix",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						Spec: corev1.NodeSpec{
 							ProviderID: "k3s://orbstack",
@@ -304,7 +304,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "k3s gets inferred from annotations",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						Spec: corev1.NodeSpec{
 							ProviderID: "k3s://orbstack",
@@ -342,7 +342,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "Azure node inferred from node labels",
 			clientFunc: func() *clientgo_fake.Clientset {
-				return clientgo_fake.NewSimpleClientset(
+				return clientgo_fake.NewClientset(
 					&corev1.Node{
 						Spec: corev1.NodeSpec{
 							ProviderID: "azure:///subscriptions/1111111-422b-9a21-fd111111111/resourceGroups/mc_asd_asd_eucentral/providers/Microsoft.Compute/virtualMachineScaleSets/aks-nodepool1-1111-vmss/virtualMachines/0",
@@ -392,7 +392,7 @@ func TestClusterProvider(t *testing.T) {
 		{
 			name: "Rancher node inferred from version",
 			clientFunc: func() *clientgo_fake.Clientset {
-				kc := clientgo_fake.NewSimpleClientset(
+				kc := clientgo_fake.NewClientset(
 					&corev1.Node{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{

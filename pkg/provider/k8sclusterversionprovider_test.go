@@ -21,7 +21,7 @@ func TestClusterVersion(t *testing.T) {
 		{
 			name: "undecodable git version from /version API returns the major and minor version concatenated string",
 			clientFunc: func() *clientgo_fake.Clientset {
-				kc := clientgo_fake.NewSimpleClientset()
+				kc := clientgo_fake.NewClientset()
 
 				d, ok := kc.Discovery().(*fakediscovery.FakeDiscovery)
 				require.True(t, ok)
@@ -48,7 +48,7 @@ func TestClusterVersion(t *testing.T) {
 		{
 			name: "gke versioning scheme is decoded properly",
 			clientFunc: func() *clientgo_fake.Clientset {
-				kc := clientgo_fake.NewSimpleClientset()
+				kc := clientgo_fake.NewClientset()
 
 				d, ok := kc.Discovery().(*fakediscovery.FakeDiscovery)
 				require.True(t, ok)
@@ -75,7 +75,7 @@ func TestClusterVersion(t *testing.T) {
 		{
 			name: "aws versioning scheme is decoded properly",
 			clientFunc: func() *clientgo_fake.Clientset {
-				kc := clientgo_fake.NewSimpleClientset()
+				kc := clientgo_fake.NewClientset()
 
 				d, ok := kc.Discovery().(*fakediscovery.FakeDiscovery)
 				require.True(t, ok)

@@ -245,7 +245,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, clusterStateWorkflow)
 
-		kc := clientgo_fake.NewSimpleClientset()
+		kc := clientgo_fake.NewClientset()
 		identifyPlatformWorkflow, err := NewIdentifyPlatformWorkflow(kc)
 		require.NoError(t, err)
 		require.NotNil(t, identifyPlatformWorkflow)
@@ -367,7 +367,7 @@ func TestManagerTriggerExecute(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, clusterStateWorkflow)
 
-		kc := clientgo_fake.NewSimpleClientset(objs...)
+		kc := clientgo_fake.NewClientset(objs...)
 		identifyPlatformWorkflow, err := NewIdentifyPlatformWorkflow(kc)
 		require.NoError(t, err)
 		require.NotNil(t, identifyPlatformWorkflow)
