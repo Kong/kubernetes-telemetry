@@ -40,7 +40,7 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 	})
 
 	t.Run("using fake client doesn't fail", func(t *testing.T) {
-		kc := clientgo_fake.NewSimpleClientset()
+		kc := clientgo_fake.NewClientset()
 
 		w, err := NewIdentifyPlatformWorkflow(kc)
 		require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 	})
 
 	t.Run("OpenShift version detection returns version when OpenShift operators are present", func(t *testing.T) {
-		kc := clientgo_fake.NewSimpleClientset(generateOpenShiftObjects()...)
+		kc := clientgo_fake.NewClientset(generateOpenShiftObjects()...)
 
 		w, err := NewIdentifyPlatformWorkflow(kc)
 		require.NoError(t, err)
