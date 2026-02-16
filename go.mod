@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v3 v3.1.0
-	github.com/gammazero/workerpool v1.1.3
+	github.com/gammazero/workerpool v1.2.1
 	github.com/go-logr/logr v1.4.3
 	github.com/puzpuzpuz/xsync/v2 v2.5.1
 	github.com/sirupsen/logrus v1.9.4
@@ -28,7 +28,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/gammazero/deque v0.2.0 // indirect
+	github.com/gammazero/deque v1.2.1 // indirect
 	github.com/go-openapi/jsonpointer v0.21.2 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
