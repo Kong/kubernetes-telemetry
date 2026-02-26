@@ -452,6 +452,61 @@ func TestWorkflowClusterState(t *testing.T) {
 	})
 }
 
+func BenchmarkClusterStateWorkflow_2000Pods_100Services(b *testing.B) {
+	objs := make([]k8sruntime.Object, 0, 2000+100+1)
+
+	for i := range 2000 {
+		objs = append(objs, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: fmt.Sprintf("ns-%d", i%10),
+				Name:      fmt.Sprintf("pod-%d", i),
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "worker",
+						Image: "busybox:latest",
+					},
+				},
+			},
+		})
+	}
+
+	for i := range 100 {
+		objs = append(objs, &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: fmt.Sprintf("ns-%d", i%10),
+				Name:      fmt.Sprintf("svc-%d", i),
+			},
+		})
+	}
+
+	objs = append(objs, &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node-1",
+		},
+	})
+
+	cl := ctrlclient_fake.NewClientBuilder().
+		WithScheme(scheme.Scheme).
+		WithRuntimeObjects(objs...).
+		Build()
+
+	dynClient := dyn_fake.NewSimpleDynamicClient(cl.Scheme(), objs...)
+
+	w, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r, err := w.Execute(context.Background())
+		require.NoError(b, err)
+		require.EqualValues(b, 2000, r[provider.PodCountKey])
+		require.EqualValues(b, 100, r[provider.ServiceCountKey])
+		require.EqualValues(b, 1, r[provider.NodeCountKey])
+	}
+}
+
 func TestWorkflowMeshDetect(t *testing.T) {
 	t.Run("providing nil client fails", func(t *testing.T) {
 		_, err := NewMeshDetectWorkflow(nil, apitypes.NamespacedName{}, apitypes.NamespacedName{})
