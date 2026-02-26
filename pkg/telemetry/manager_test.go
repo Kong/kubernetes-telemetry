@@ -17,8 +17,8 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	dyn_fake "k8s.io/client-go/dynamic/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
+	metadata_fake "k8s.io/client-go/metadata/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -239,9 +239,9 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 			WithRuntimeObjects(objs...).
 			Build()
 
-		dynClient := dyn_fake.NewSimpleDynamicClient(cl.Scheme(), objs...)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(scheme.Scheme, toPartialObjectMetadata(scheme.Scheme, objs...)...)
 
-		clusterStateWorkflow, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
+		clusterStateWorkflow, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
 		require.NotNil(t, clusterStateWorkflow)
 
@@ -361,9 +361,9 @@ func TestManagerTriggerExecute(t *testing.T) {
 		}
 
 		cl := ctrlclient_fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
-		dynClient := dyn_fake.NewSimpleDynamicClient(scheme.Scheme, objs...)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(scheme.Scheme, toPartialObjectMetadata(scheme.Scheme, objs...)...)
 
-		clusterStateWorkflow, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
+		clusterStateWorkflow, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
 		require.NotNil(t, clusterStateWorkflow)
 

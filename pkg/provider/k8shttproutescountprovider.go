@@ -3,7 +3,7 @@ package provider
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
@@ -19,11 +19,11 @@ const (
 // NewK8sHTTPRouteCountProvider creates telemetry data provider that will query the
 // configured k8s cluster - using the provided client - to get a HTTPRoute count from
 // the cluster.
-func NewK8sHTTPRouteCountProvider(name string, d dynamic.Interface, rm meta.RESTMapper) (Provider, error) {
+func NewK8sHTTPRouteCountProvider(name string, m metadata.Interface, rm meta.RESTMapper) (Provider, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "gateway.networking.k8s.io",
 		Version:  "v1",
 		Resource: "httproutes",
 	}
-	return NewK8sObjectCountProviderWithRESTMapper(name, HTTPRouteCountKind, d, gvr, rm)
+	return NewK8sObjectCountProviderWithRESTMapper(name, HTTPRouteCountKind, m, gvr, rm)
 }
