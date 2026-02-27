@@ -67,6 +67,10 @@ linters-settings:
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
+
+    - pkg: runtime
+      alias: goruntime
+
   forbidigo:
     exclude-godoc-examples: false
     forbid:

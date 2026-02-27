@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
+	goruntime "runtime"
 	"testing"
 	"time"
 
@@ -16,14 +16,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
 	metadata_fake "k8s.io/client-go/metadata/fake"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
@@ -174,12 +170,10 @@ func TestManagerWithMultilpleWorkflows(t *testing.T) {
 }
 
 func TestManagerWithCatalogWorkflows(t *testing.T) {
-	t.Run("identify platform and cluster state", func(t *testing.T) {
-		require.NoError(t, gatewayv1.Install(scheme.Scheme))
-		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
-		require.NoError(t, gatewayv1alpha2.Install(scheme.Scheme))
+	s := Scheme(t)
 
-		objs := []k8sruntime.Object{
+	t.Run("identify platform and cluster state", func(t *testing.T) {
+		objs := []runtime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -235,11 +229,11 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 
 		cl := ctrlclient_fake.
 			NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(s).
 			WithRuntimeObjects(objs...).
 			Build()
 
-		metadataClient := metadata_fake.NewSimpleMetadataClient(scheme.Scheme, toPartialObjectMetadata(scheme.Scheme, objs...)...)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(s, toPartialObjectMetadata(s, objs...)...)
 
 		clusterStateWorkflow, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
@@ -288,7 +282,7 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 						// provider.TLSRouteCountKey:       1,
 					},
 					"identify-platform": types.ProviderReport{
-						"k8s_arch":     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+						"k8s_arch":     fmt.Sprintf("%s/%s", goruntime.GOOS, goruntime.GOARCH),
 						"k8sv":         "v0.0.0-master+$Format:%H$",
 						"k8sv_semver":  "v0.0.0",
 						"k8s_provider": provider.ClusterProviderUnknown,
@@ -302,8 +296,10 @@ func TestManagerWithCatalogWorkflows(t *testing.T) {
 }
 
 func TestManagerTriggerExecute(t *testing.T) {
+	s := Scheme(t)
+
 	t.Run("TriggerExecute successfully triggers an execution", func(t *testing.T) {
-		objs := []k8sruntime.Object{
+		objs := []runtime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -361,7 +357,7 @@ func TestManagerTriggerExecute(t *testing.T) {
 		}
 
 		cl := ctrlclient_fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
-		metadataClient := metadata_fake.NewSimpleMetadataClient(scheme.Scheme, toPartialObjectMetadata(scheme.Scheme, objs...)...)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(s, toPartialObjectMetadata(s, objs...)...)
 
 		clusterStateWorkflow, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
@@ -391,7 +387,7 @@ func TestManagerTriggerExecute(t *testing.T) {
 		report := <-ch
 		m.Stop()
 
-		arch := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
+		arch := fmt.Sprintf("%s/%s", goruntime.GOOS, goruntime.GOARCH)
 		require.EqualValues(t,
 			fmt.Sprintf("<14>signal=ping;k8s_arch=%s;k8s_provider=AWS;k8sv=v0.0.0-master+$Format:%%H$;k8sv_semver=v0.0.0;k8s_ingresses_count=1;k8s_nodes_count=1;k8s_pods_count=1;k8s_services_count=2;\n", arch),
 			string(report),

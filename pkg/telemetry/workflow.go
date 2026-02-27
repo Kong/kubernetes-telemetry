@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
+	goruntime "runtime"
 	"sync"
 
 	"github.com/gammazero/workerpool"
@@ -36,7 +36,7 @@ type workflow struct {
 func NewWorkflow(name string) Workflow {
 	return &workflow{
 		name:        name,
-		concurrency: runtime.NumCPU(),
+		concurrency: goruntime.NumCPU(),
 		providers:   make([]provider.Provider, 0),
 	}
 }

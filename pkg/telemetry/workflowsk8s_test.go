@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"runtime"
+	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -14,11 +14,10 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/kubernetes/scheme"
 	metadata_fake "k8s.io/client-go/metadata/fake"
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -32,33 +31,6 @@ import (
 const (
 	exampleOpenShiftVersion = "4.13.0"
 )
-
-// toPartialObjectMetadata converts typed Kubernetes objects into
-// *metav1.PartialObjectMetadata so they can be used with the metadata fake client.
-func toPartialObjectMetadata(s *k8sruntime.Scheme, objs ...k8sruntime.Object) []k8sruntime.Object {
-	out := make([]k8sruntime.Object, 0, len(objs))
-	for _, obj := range objs {
-		gvks, _, err := s.ObjectKinds(obj)
-		if err != nil || len(gvks) == 0 {
-			continue
-		}
-		accessor, err := meta.Accessor(obj)
-		if err != nil {
-			continue
-		}
-		out = append(out, &metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gvks[0].GroupVersion().String(),
-				Kind:       gvks[0].Kind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      accessor.GetName(),
-				Namespace: accessor.GetNamespace(),
-			},
-		})
-	}
-	return out
-}
 
 func TestWorkflowIdentifyPlatform(t *testing.T) {
 	t.Run("basic construction fail for nil kubernetes.Interface", func(t *testing.T) {
@@ -77,7 +49,7 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, r)
 		require.EqualValues(t, types.ProviderReport{
-			provider.ClusterArchKey: fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+			provider.ClusterArchKey: fmt.Sprintf("%s/%s", goruntime.GOOS, goruntime.GOARCH),
 			// Not really true but a reliable return value from client-go's fake client.
 			provider.ClusterVersionKey:       "v0.0.0-master+$Format:%H$",
 			provider.ClusterVersionSemverKey: "v0.0.0",
@@ -111,8 +83,8 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 	})
 }
 
-func generateOpenShiftObjects() []k8sruntime.Object {
-	return []k8sruntime.Object{
+func generateOpenShiftObjects() []runtime.Object {
+	return []runtime.Object{
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: provider.OpenShiftVersionPodNamespace,
@@ -151,11 +123,7 @@ func TestWorkflowClusterState(t *testing.T) {
 	})
 
 	t.Run("properly reports cluster state", func(t *testing.T) {
-		require.NoError(t, gatewayv1.Install(scheme.Scheme))
-		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
-		require.NoError(t, gatewayv1alpha2.Install(scheme.Scheme))
-
-		objs := []k8sruntime.Object{
+		objs := []runtime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -317,13 +285,14 @@ func TestWorkflowClusterState(t *testing.T) {
 		as(gatewayv1alpha2.GroupVersion, "UDPRoute", "udproutes")
 		as(gatewayv1alpha2.GroupVersion, "TLSRoute", "tlsroutes")
 
+		s := Scheme(t)
 		cl := ctrlclient_fake.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(s).
 			WithRuntimeObjects(objs...).
 			WithRESTMapper(restMapper).
 			Build()
 
-		metadataClient := metadata_fake.NewSimpleMetadataClient(scheme.Scheme, toPartialObjectMetadata(scheme.Scheme, objs...)...)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(s, toPartialObjectMetadata(s, objs...)...)
 
 		w, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
@@ -354,7 +323,7 @@ func TestWorkflowClusterState(t *testing.T) {
 	})
 
 	t.Run("properly reports cluster state without GW API objects when their CRDs are missing", func(t *testing.T) {
-		objs := []k8sruntime.Object{
+		objs := []runtime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -430,12 +399,13 @@ func TestWorkflowClusterState(t *testing.T) {
 			},
 		}
 
+		s := Scheme(t)
 		cl := ctrlclient_fake.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(s).
 			WithRuntimeObjects(objs...).
 			Build()
 
-		metadataClient := metadata_fake.NewSimpleMetadataClient(scheme.Scheme, toPartialObjectMetadata(scheme.Scheme, objs...)...)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(s, toPartialObjectMetadata(s, objs...)...)
 
 		w, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
@@ -465,7 +435,7 @@ func TestWorkflowClusterState(t *testing.T) {
 }
 
 func BenchmarkClusterStateWorkflow_2000Pods_100Services(b *testing.B) {
-	objs := make([]k8sruntime.Object, 0, 2000+100+1)
+	objs := make([]runtime.Object, 0, 2000+100+1)
 
 	for i := range 2000 {
 		objs = append(objs, &corev1.Pod{
@@ -499,10 +469,7 @@ func BenchmarkClusterStateWorkflow_2000Pods_100Services(b *testing.B) {
 		},
 	})
 
-	s := k8sruntime.NewScheme()
-	metav1.AddMetaToScheme(s)
-	corev1.AddToScheme(s)
-
+	s := Scheme(b)
 	cl := ctrlclient_fake.NewClientBuilder().
 		WithScheme(s).
 		WithRuntimeObjects(objs...).
