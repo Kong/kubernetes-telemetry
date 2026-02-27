@@ -2,7 +2,7 @@ package provider
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
@@ -18,12 +18,12 @@ const (
 // NewK8sIngressCountProvider creates telemetry data provider that will query the
 // configured k8s cluster - using the provided client - to get a pod count from
 // the cluster.
-func NewK8sIngressCountProvider(name string, d dynamic.Interface) (Provider, error) {
+func NewK8sIngressCountProvider(name string, m metadata.Interface) (Provider, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "networking.k8s.io",
 		Version:  "v1",
 		Resource: "ingresses",
 	}
 
-	return NewK8sObjectCountProvider(name, IngressCountKind, d, gvr)
+	return NewK8sObjectCountProvider(name, IngressCountKind, m, gvr)
 }

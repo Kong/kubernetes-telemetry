@@ -3,7 +3,7 @@ package provider
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
@@ -19,11 +19,11 @@ const (
 // NewK8sTCPRouteCountProvider creates telemetry data provider that will query the
 // configured k8s cluster - using the provided client - to get a TCPRoute count from
 // the cluster.
-func NewK8sTCPRouteCountProvider(name string, d dynamic.Interface, rm meta.RESTMapper) (Provider, error) {
+func NewK8sTCPRouteCountProvider(name string, m metadata.Interface, rm meta.RESTMapper) (Provider, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "gateway.networking.k8s.io",
 		Version:  "v1alpha2",
 		Resource: "tcproutes",
 	}
-	return NewK8sObjectCountProviderWithRESTMapper(name, TCPRouteCountKind, d, gvr, rm)
+	return NewK8sObjectCountProviderWithRESTMapper(name, TCPRouteCountKind, m, gvr, rm)
 }
