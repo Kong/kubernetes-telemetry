@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"runtime"
+	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -14,12 +14,11 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
-	dyn_fake "k8s.io/client-go/dynamic/fake"
 	clientgo_fake "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/kubernetes/scheme"
+	metadata_fake "k8s.io/client-go/metadata/fake"
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -50,7 +49,7 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, r)
 		require.EqualValues(t, types.ProviderReport{
-			provider.ClusterArchKey: fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+			provider.ClusterArchKey: fmt.Sprintf("%s/%s", goruntime.GOOS, goruntime.GOARCH),
 			// Not really true but a reliable return value from client-go's fake client.
 			provider.ClusterVersionKey:       "v0.0.0-master+$Format:%H$",
 			provider.ClusterVersionSemverKey: "v0.0.0",
@@ -84,8 +83,8 @@ func TestWorkflowIdentifyPlatform(t *testing.T) {
 	})
 }
 
-func generateOpenShiftObjects() []k8sruntime.Object {
-	return []k8sruntime.Object{
+func generateOpenShiftObjects() []runtime.Object {
+	return []runtime.Object{
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: provider.OpenShiftVersionPodNamespace,
@@ -124,11 +123,7 @@ func TestWorkflowClusterState(t *testing.T) {
 	})
 
 	t.Run("properly reports cluster state", func(t *testing.T) {
-		require.NoError(t, gatewayv1.Install(scheme.Scheme))
-		require.NoError(t, gatewayv1beta1.Install(scheme.Scheme))
-		require.NoError(t, gatewayv1alpha2.Install(scheme.Scheme))
-
-		objs := []k8sruntime.Object{
+		objs := []runtime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -290,26 +285,16 @@ func TestWorkflowClusterState(t *testing.T) {
 		as(gatewayv1alpha2.GroupVersion, "UDPRoute", "udproutes")
 		as(gatewayv1alpha2.GroupVersion, "TLSRoute", "tlsroutes")
 
+		s := Scheme(t)
 		cl := ctrlclient_fake.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(s).
 			WithRuntimeObjects(objs...).
 			WithRESTMapper(restMapper).
 			Build()
 
-		// Hack for Kind "Gateway" to work.
-		dynClient := dyn_fake.NewSimpleDynamicClientWithCustomListKinds(
-			scheme.Scheme,
-			map[schema.GroupVersionResource]string{
-				{
-					Group:    "gateway.networking.k8s.io",
-					Version:  "v1",
-					Resource: "gateways",
-				}: "GatewayList",
-			},
-			objs...,
-		)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(s, toPartialObjectMetadata(s, objs...)...)
 
-		w, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
+		w, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
 		require.NotNil(t, w)
 
@@ -338,7 +323,7 @@ func TestWorkflowClusterState(t *testing.T) {
 	})
 
 	t.Run("properly reports cluster state without GW API objects when their CRDs are missing", func(t *testing.T) {
-		objs := []k8sruntime.Object{
+		objs := []runtime.Object{
 			&corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
@@ -414,18 +399,15 @@ func TestWorkflowClusterState(t *testing.T) {
 			},
 		}
 
+		s := Scheme(t)
 		cl := ctrlclient_fake.NewClientBuilder().
-			WithScheme(scheme.Scheme).
+			WithScheme(s).
 			WithRuntimeObjects(objs...).
 			Build()
 
-		// Hack for Kind "Gateway" to work.
-		dynClient := dyn_fake.NewSimpleDynamicClient(
-			scheme.Scheme,
-			objs...,
-		)
+		metadataClient := metadata_fake.NewSimpleMetadataClient(s, toPartialObjectMetadata(s, objs...)...)
 
-		w, err := NewClusterStateWorkflow(dynClient, cl.RESTMapper())
+		w, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
 		require.NoError(t, err)
 		require.NotNil(t, w)
 
@@ -450,6 +432,62 @@ func TestWorkflowClusterState(t *testing.T) {
 			// No Gateway API related objects are reported and also no error is returned.
 		}, r)
 	})
+}
+
+func BenchmarkClusterStateWorkflow_2000Pods_100Services(b *testing.B) {
+	objs := make([]runtime.Object, 0, 2000+100+1)
+
+	for i := range 2000 {
+		objs = append(objs, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: fmt.Sprintf("ns-%d", i%10),
+				Name:      fmt.Sprintf("pod-%d", i),
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "worker",
+						Image: "busybox:latest",
+					},
+				},
+			},
+		})
+	}
+
+	for i := range 100 {
+		objs = append(objs, &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: fmt.Sprintf("ns-%d", i%10),
+				Name:      fmt.Sprintf("svc-%d", i),
+			},
+		})
+	}
+
+	objs = append(objs, &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node-1",
+		},
+	})
+
+	s := Scheme(b)
+	cl := ctrlclient_fake.NewClientBuilder().
+		WithScheme(s).
+		WithRuntimeObjects(objs...).
+		Build()
+
+	metadataClient := metadata_fake.NewSimpleMetadataClient(s, toPartialObjectMetadata(s, objs...)...)
+
+	w, err := NewClusterStateWorkflow(metadataClient, cl.RESTMapper())
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for b.Loop() {
+		r, err := w.Execute(b.Context())
+		require.NoError(b, err)
+		require.EqualValues(b, 2000, r[provider.PodCountKey])
+		require.EqualValues(b, 100, r[provider.ServiceCountKey])
+		require.EqualValues(b, 1, r[provider.NodeCountKey])
+	}
 }
 
 func TestWorkflowMeshDetect(t *testing.T) {

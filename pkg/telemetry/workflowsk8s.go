@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
@@ -87,15 +87,15 @@ const (
 //	  "k8s_udproutes_count": 1,
 //	  "k8s_referencegrants_count": 1
 //	}
-func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow, error) {
-	if d == nil {
+func NewClusterStateWorkflow(m metadata.Interface, rm meta.RESTMapper) (Workflow, error) {
+	if m == nil {
 		return nil, ErrNilDynClientProvided
 	}
 
 	w := NewWorkflow(ClusterStateWorkflowName)
 
 	coreObjects := []struct {
-		providerCreator func(string, dynamic.Interface) (provider.Provider, error)
+		providerCreator func(string, metadata.Interface) (provider.Provider, error)
 		countKey        types.ProviderReportKey
 	}{
 		{
@@ -116,7 +116,7 @@ func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow,
 		},
 	}
 	for _, co := range coreObjects {
-		provider, err := co.providerCreator(string(co.countKey), d)
+		provider, err := co.providerCreator(string(co.countKey), m)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +126,7 @@ func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow,
 	// Below listed count providers for resources from API group "gateway.networking.k8s.io",
 	// are added optionally, when the corresponding CRDs are present in the cluster.
 	optionalObjects := []struct {
-		providerCreator func(string, dynamic.Interface, meta.RESTMapper) (provider.Provider, error)
+		providerCreator func(string, metadata.Interface, meta.RESTMapper) (provider.Provider, error)
 		countKey        types.ProviderReportKey
 	}{
 		{
@@ -163,7 +163,7 @@ func NewClusterStateWorkflow(d dynamic.Interface, rm meta.RESTMapper) (Workflow,
 		},
 	}
 	for _, oo := range optionalObjects {
-		p, err := oo.providerCreator(string(oo.countKey), d, rm)
+		p, err := oo.providerCreator(string(oo.countKey), m, rm)
 		if err != nil {
 			if errGVR := (provider.ErrGVRNotAvailable{}); errors.As(err, &errGVR) {
 				// GVR unavailable, just skip it.

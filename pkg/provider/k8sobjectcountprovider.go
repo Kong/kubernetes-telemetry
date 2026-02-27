@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/metadata"
 
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 )
@@ -19,16 +19,16 @@ import (
 // Example: Use {Group: "", Version: "v1", Resource: "pods"} to get a Provider that counts all Pods in the cluster.
 type k8sObjectCount struct {
 	gvr      schema.GroupVersionResource
-	resource dynamic.NamespaceableResourceInterface
+	resource metadata.Getter
 
 	base
 }
 
 // NewK8sObjectCountProvider returns a k8s object count provider, which will provide a count of
 // specified resource.
-func NewK8sObjectCountProvider(name string, kind Kind, d dynamic.Interface, gvr schema.GroupVersionResource) (Provider, error) {
+func NewK8sObjectCountProvider(name string, kind Kind, m metadata.Interface, gvr schema.GroupVersionResource) (Provider, error) {
 	p := &k8sObjectCount{
-		resource: d.Resource(gvr),
+		resource: m.Resource(gvr),
 		gvr:      gvr,
 		base: base{
 			name: name,
@@ -42,8 +42,8 @@ func NewK8sObjectCountProvider(name string, kind Kind, d dynamic.Interface, gvr 
 // NewK8sObjectCountProviderWithRESTMapper returns a k8s object count provider and it will use the
 // provided rest mapper to check if there is a kind for the provided group version resource,
 // available on the cluster.
-func NewK8sObjectCountProviderWithRESTMapper(name string, kind Kind, d dynamic.Interface, gvr schema.GroupVersionResource, rm meta.RESTMapper) (Provider, error) {
-	p, err := NewK8sObjectCountProvider(name, kind, d, gvr)
+func NewK8sObjectCountProviderWithRESTMapper(name string, kind Kind, m metadata.Interface, gvr schema.GroupVersionResource, rm meta.RESTMapper) (Provider, error) {
+	p, err := NewK8sObjectCountProvider(name, kind, m, gvr)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func NewK8sObjectCountProviderWithRESTMapper(name string, kind Kind, d dynamic.I
 }
 
 const (
-	defaultPageLimit = 1000
+	defaultPageLimit = 100
 )
 
 func (k *k8sObjectCount) Provide(ctx context.Context) (types.ProviderReport, error) {
