@@ -22,7 +22,7 @@ const (
 func NewK8sReferenceGrantCountProvider(name string, m metadata.Interface, rm meta.RESTMapper) (Provider, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "gateway.networking.k8s.io",
-		Version:  "v1beta1",
+		Version:  "v1",
 		Resource: "referencegrants",
 	}
 	return NewK8sObjectCountProviderWithRESTMapper(name, ReferenceGrantCountKind, m, gvr, rm)
