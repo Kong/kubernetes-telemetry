@@ -22,7 +22,6 @@ import (
 	ctrlclient_fake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
@@ -168,7 +167,7 @@ func TestWorkflowClusterState(t *testing.T) {
 					Name:      "httproute-1",
 				},
 			},
-			&gatewayv1beta1.ReferenceGrant{
+			&gatewayv1.ReferenceGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "kong",
 					Name:      "referencegrant-1",
@@ -280,7 +279,7 @@ func TestWorkflowClusterState(t *testing.T) {
 		as(gatewayv1.GroupVersion, "Gateway", "gateways")
 		as(gatewayv1.GroupVersion, "HTTPRoute", "httproutes")
 		as(gatewayv1.GroupVersion, "GRPCRoute", "grpcroutes")
-		as(gatewayv1beta1.GroupVersion, "ReferenceGrant", "referencegrants")
+		as(gatewayv1.GroupVersion, "ReferenceGrant", "referencegrants")
 		as(gatewayv1alpha2.GroupVersion, "TCPRoute", "tcproutes")
 		as(gatewayv1alpha2.GroupVersion, "UDPRoute", "udproutes")
 		as(gatewayv1alpha2.GroupVersion, "TLSRoute", "tlsroutes")
@@ -313,7 +312,7 @@ func TestWorkflowClusterState(t *testing.T) {
 			provider.HTTPRouteCountKey:    1,
 			provider.GatewayClassCountKey: 1,
 			provider.GatewayCountKey:      0, // This should be equal to 1 but see above for comment explaining the issue.
-			// gateway.networking.k8s.io v1beta1
+			// gateway.networking.k8s.io v1
 			provider.ReferenceGrantCountKey: 1,
 			// gateway.networking.k8s.io v1alpha2
 			provider.TCPRouteCountKey: 1,
